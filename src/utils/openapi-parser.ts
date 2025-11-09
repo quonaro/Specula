@@ -1,4 +1,5 @@
 import { OpenAPISpec, TagNode } from "@/types/openapi";
+import type { SpecWithSource } from "@/stores/spec";
 
 export function parseOpenAPISpec(spec: OpenAPISpec): TagNode {
   const root: TagNode = {
@@ -190,4 +191,58 @@ export function slugToEndpointPath(slug: string): string {
     })
     .join('/')
   return path
+}
+
+// Parse multiple specs into a single tree structure where each spec becomes a top-level group
+export function parseMultipleSpecs(specs: SpecWithSource[]): TagNode {
+  const root: TagNode = {
+    name: "root",
+    fullPath: "",
+    children: new Map(),
+    operations: [],
+  };
+
+  specs.forEach((specWithSource) => {
+    const specTitle = specWithSource.title;
+    const specNode = parseOpenAPISpec(specWithSource.spec);
+    
+    // Create a top-level node for this spec
+    if (!root.children.has(specTitle)) {
+      root.children.set(specTitle, {
+        name: specTitle,
+        fullPath: specTitle,
+        children: specNode.children, // Use the children from the parsed spec
+        operations: specNode.operations, // Use the operations from the parsed spec
+      });
+    } else {
+      // If a spec with the same title already exists, merge the children and operations
+      const existingNode = root.children.get(specTitle)!;
+      // Merge children
+      specNode.children.forEach((childNode, childName) => {
+        if (!existingNode.children.has(childName)) {
+          existingNode.children.set(childName, childNode);
+        } else {
+          // Merge operations if child already exists
+          const existingChild = existingNode.children.get(childName)!;
+          childNode.operations.forEach(op => {
+            if (!existingChild.operations.some(existingOp => 
+              existingOp.method === op.method && existingOp.path === op.path
+            )) {
+              existingChild.operations.push(op);
+            }
+          });
+        }
+      });
+      // Merge operations at the spec level
+      specNode.operations.forEach(op => {
+        if (!existingNode.operations.some(existingOp => 
+          existingOp.method === op.method && existingOp.path === op.path
+        )) {
+          existingNode.operations.push(op);
+        }
+      });
+    }
+  });
+
+  return root;
 }

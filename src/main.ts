@@ -1,15 +1,20 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import Toast from 'vue-toastification'
 import 'vue-toastification/dist/index.css'
 import './index.css'
 import App from './App.vue'
 import Index from './pages/Index.vue'
+import Selection from './pages/Selection.vue'
 import NotFound from './pages/NotFound.vue'
+
+const pinia = createPinia()
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    { path: '/selection', component: Selection },
     { path: '/', component: Index },
     { path: '/group/:groupPath', component: Index },
     { path: '/endpoint/:method/:path(.*)', component: Index },
@@ -18,6 +23,7 @@ const router = createRouter({
 })
 
 const app = createApp(App)
+app.use(pinia)
 app.use(router)
 app.use(Toast, {
   position: 'top-right',
