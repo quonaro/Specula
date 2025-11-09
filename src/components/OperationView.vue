@@ -15,20 +15,6 @@
             class="w-3 h-3 rounded-full shrink-0"
             :class="isPrivate ? 'bg-red-500' : 'bg-green-500'"
           ></div>
-          <button
-            @click="toggleFavorite"
-            class="shrink-0 p-1.5 hover:bg-accent rounded transition-colors"
-            :title="isFavorite ? 'Remove from favorites' : 'Add to favorites'"
-          >
-            <Star
-              :class="[
-                'w-5 h-5 transition-colors',
-                isFavorite
-                  ? 'fill-yellow-400 text-yellow-400'
-                  : 'text-muted-foreground hover:text-yellow-400'
-              ]"
-            />
-          </button>
         </div>
         <h2 v-if="operation.summary" class="text-2xl font-bold text-foreground">
           {{ operation.summary }}
@@ -306,13 +292,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Star } from 'lucide-vue-next'
 import type { Operation, OpenAPISpec, PathItem } from '@/types/openapi'
 import { RefResolver } from '@/utils/ref-resolver'
 import { isOperationPrivate } from '@/utils/openapi-parser'
-import { useEndpointFavoritesStore } from '@/stores/endpointFavorites'
-import { useSpecCacheStore } from '@/stores/specCache'
-import { useToast } from '@/composables/useToast'
 import Badge from './ui/Badge.vue'
 import Card from './ui/Card.vue'
 import ScrollArea from './ui/ScrollArea.vue'
@@ -348,65 +330,6 @@ const pathItem = computed(() => {
 const isPrivate = computed(() => {
   return isOperationPrivate(props.operation, pathItem.value, props.spec)
 })
-
-const endpointFavoritesStore = useEndpointFavoritesStore()
-const specCacheStore = useSpecCacheStore()
-const { toast } = useToast()
-
-// Get spec identifier (hash or sourceUrl)
-const getSpecIdentifier = computed(() => {
-  // Try to find hash in cache
-  const cachedSpecs = Array.from(specCacheStore.cache.values())
-  const cached = cachedSpecs.find(c => 
-    JSON.stringify(c.spec) === JSON.stringify(props.spec)
-  )
-  if (cached) {
-    return { specHash: cached.hash, sourceUrl: props.sourceUrl, specTitle: cached.title }
-  }
-  return { sourceUrl: props.sourceUrl, specTitle: props.spec.info?.title || 'Untitled Specification' }
-})
-
-// Check if endpoint is favorite
-const isFavorite = computed(() => {
-  return endpointFavoritesStore.isFavorite(
-    props.method,
-    props.path,
-    getSpecIdentifier.value.specHash,
-    getSpecIdentifier.value.sourceUrl
-  )
-})
-
-// Toggle favorite status
-const toggleFavorite = () => {
-  const identifier = getSpecIdentifier.value
-  const favorite = isFavorite.value
-  
-  if (favorite) {
-    endpointFavoritesStore.removeFromFavorites(
-      props.method,
-      props.path,
-      identifier.specHash,
-      identifier.sourceUrl
-    )
-    toast({
-      title: 'Removed from favorites',
-      description: `${props.method} ${props.path}`,
-    })
-  } else {
-    endpointFavoritesStore.addToFavorites(
-      props.method,
-      props.path,
-      identifier.specHash,
-      identifier.sourceUrl,
-      identifier.specTitle,
-      props.operation.summary
-    )
-    toast({
-      title: 'Added to favorites',
-      description: `${props.method} ${props.path}`,
-    })
-  }
-}
 
 const getMethodColorClass = (method: string) => {
   const colorMap: Record<string, string> = {

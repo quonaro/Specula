@@ -52,20 +52,6 @@
               </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <button
-                @click.stop="toggleFavorite(endpoint)"
-                class="p-1 hover:bg-accent rounded transition-colors"
-                :title="isEndpointFavorite(endpoint) ? 'Remove from favorites' : 'Add to favorites'"
-              >
-                <Star
-                  :class="[
-                    'w-4 h-4 transition-colors',
-                    isEndpointFavorite(endpoint)
-                      ? 'fill-yellow-400 text-yellow-400'
-                      : 'text-muted-foreground hover:text-yellow-400'
-                  ]"
-                />
-              </button>
               <span
                 v-if="endpoint.operation.deprecated"
                 class="text-xs px-2 py-1 rounded bg-destructive/10 text-destructive"
@@ -94,14 +80,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Star } from 'lucide-vue-next'
 import type { TagNode } from '@/types/openapi'
 import Badge from './ui/Badge.vue'
 import { isOperationPrivate } from '@/utils/openapi-parser'
 import { useSpecStore } from '@/stores/spec'
-import { useEndpointFavoritesStore } from '@/stores/endpointFavorites'
-import { useSpecCacheStore } from '@/stores/specCache'
-import { useToast } from '@/composables/useToast'
 
 interface Props {
   groupNode: TagNode
@@ -138,19 +120,7 @@ function collectAllEndpoints(node: TagNode): Array<{
 }
 
 const allEndpoints = computed(() => {
-  const endpoints = collectAllEndpoints(props.groupNode)
-  // Sort: favorites first
-  return endpoints.sort((a, b) => {
-    const aIsFavorite = isEndpointFavorite(a)
-    const bIsFavorite = isEndpointFavorite(b)
-    
-    // Favorites first
-    if (aIsFavorite && !bIsFavorite) return -1
-    if (!aIsFavorite && bIsFavorite) return 1
-    
-    // If both are favorites or both are not, maintain original order
-    return 0
-  })
+  return collectAllEndpoints(props.groupNode)
 })
 
 const isSelected = (method: string, path: string) => {
@@ -176,35 +146,6 @@ const handleEndpointClick = (method: string, path: string) => {
 }
 
 const specStore = useSpecStore()
-const endpointFavoritesStore = useEndpointFavoritesStore()
-const specCacheStore = useSpecCacheStore()
-const { toast } = useToast()
-
-// Get spec identifier (hash or sourceUrl) for an endpoint
-const getSpecIdentifier = (endpoint: {
-  method: string
-  path: string
-  operation: any
-}) => {
-  for (const specWithSource of specStore.specs) {
-    const pathItem = specWithSource.spec.paths[endpoint.path]
-    if (pathItem) {
-      const operation = pathItem[endpoint.method.toLowerCase() as keyof typeof pathItem]
-      if (operation) {
-        // Try to find hash in cache
-        const cachedSpecs = Array.from(specCacheStore.cache.values())
-        const cached = cachedSpecs.find(c => 
-          JSON.stringify(c.spec) === JSON.stringify(specWithSource.spec)
-        )
-        if (cached) {
-          return { specHash: cached.hash, sourceUrl: specWithSource.sourceUrl, specTitle: specWithSource.title }
-        }
-        return { sourceUrl: specWithSource.sourceUrl, specTitle: specWithSource.title }
-      }
-    }
-  }
-  return { specTitle: 'Unknown' }
-}
 
 // Check if endpoint is private
 const isEndpointPrivate = (endpoint: {
@@ -224,57 +165,6 @@ const isEndpointPrivate = (endpoint: {
     }
   }
   return false
-}
-
-// Check if endpoint is favorite
-const isEndpointFavorite = (endpoint: {
-  method: string
-  path: string
-  operation: any
-}) => {
-  const identifier = getSpecIdentifier(endpoint)
-  return endpointFavoritesStore.isFavorite(
-    endpoint.method,
-    endpoint.path,
-    identifier.specHash,
-    identifier.sourceUrl
-  )
-}
-
-// Toggle favorite status
-const toggleFavorite = (endpoint: {
-  method: string
-  path: string
-  operation: any
-}) => {
-  const identifier = getSpecIdentifier(endpoint)
-  const isFavorite = isEndpointFavorite(endpoint)
-  
-  if (isFavorite) {
-    endpointFavoritesStore.removeFromFavorites(
-      endpoint.method,
-      endpoint.path,
-      identifier.specHash,
-      identifier.sourceUrl
-    )
-    toast({
-      title: 'Removed from favorites',
-      description: `${endpoint.method} ${endpoint.path}`,
-    })
-  } else {
-    endpointFavoritesStore.addToFavorites(
-      endpoint.method,
-      endpoint.path,
-      identifier.specHash,
-      identifier.sourceUrl,
-      identifier.specTitle,
-      endpoint.operation.summary
-    )
-    toast({
-      title: 'Added to favorites',
-      description: `${endpoint.method} ${endpoint.path}`,
-    })
-  }
 }
 </script>
 
