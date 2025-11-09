@@ -18,7 +18,8 @@ const router = createRouter({
     { path: '/', component: Index },
     { path: '/group/:groupPath', component: Index },
     { path: '/endpoint/:method/:path(.*)', component: Index },
-    { path: '/:pathMatch(.*)*', component: NotFound }
+    // Catch-all route - Index will handle custom paths like /example.com/user/get/users
+    { path: '/:pathMatch(.*)*', component: Index }
   ]
 })
 

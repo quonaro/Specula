@@ -207,6 +207,95 @@ const restoreStateFromRoute = () => {
   } else if (path === '/') {
     selectedOperation.value = null
     selectedGroup.value = null
+  } else {
+    // Handle custom paths like /example.com/user/get/users
+    // Format: /path/to/endpoint/method where method is HTTP method (GET, POST, etc.)
+    const pathWithoutLeadingSlash = path.startsWith('/') ? path.slice(1) : path
+    const pathSegments = pathWithoutLeadingSlash.split('/').filter(s => s.length > 0)
+    
+    // Check if it looks like an endpoint path (has at least method and path)
+    if (pathSegments.length >= 2) {
+      // Last segment is HTTP method, rest is endpoint path
+      const method = pathSegments[pathSegments.length - 1]?.toUpperCase()
+      const endpointPathFromUrl = '/' + pathSegments.slice(0, -1).join('/')
+      
+      // Valid HTTP methods
+      const validMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD', 'TRACE']
+      
+      if (method && validMethods.includes(method)) {
+        let foundPath: string | null = null
+        let foundSpec: OpenAPISpec | null = null
+        
+        // First, try exact path match
+        for (const specWithSource of specStore.specs) {
+          if (specWithSource.spec.paths[endpointPathFromUrl]) {
+            const pathItem = specWithSource.spec.paths[endpointPathFromUrl]
+            const operation = pathItem[method.toLowerCase() as keyof typeof pathItem]
+            if (operation) {
+              foundPath = endpointPathFromUrl
+              foundSpec = specWithSource.spec
+              break
+            }
+          }
+        }
+        
+        // If not found, try to match by path segments (handling path parameters)
+        if (!foundPath) {
+          for (const specWithSource of specStore.specs) {
+            for (const [endpointPath, pathItem] of Object.entries(specWithSource.spec.paths)) {
+              const endpointSegments = endpointPath.split('/').filter(s => s.length > 0)
+              const urlSegments = pathSegments.slice(0, -1) // Exclude method
+              
+              // Try to match path segments
+              if (endpointSegments.length === urlSegments.length) {
+                let matches = true
+                for (let i = 0; i < endpointSegments.length; i++) {
+                  const endpointSeg = endpointSegments[i]
+                  const urlSeg = urlSegments[i]
+                  // Allow match if endpoint segment is a parameter {param} or :param, or if segments match exactly
+                  if (!endpointSeg.match(/^[{:]/) && endpointSeg !== urlSeg) {
+                    matches = false
+                    break
+                  }
+                }
+                
+                if (matches) {
+                  const operation = pathItem[method.toLowerCase() as keyof typeof pathItem]
+                  if (operation) {
+                    foundPath = endpointPath
+                    foundSpec = specWithSource.spec
+                    break
+                  }
+                }
+              }
+            }
+            if (foundPath) break
+          }
+        }
+        
+        if (foundPath && foundSpec) {
+          selectedOperation.value = { method, path: foundPath }
+          selectedGroup.value = null
+          // Update URL to use proper format with slug, preserving query params
+          const slug = endpointPathToSlug(foundPath)
+          const methodLower = method.toLowerCase()
+          const query: Record<string, string | string[]> = { ...route.query }
+          router.replace({ path: `/endpoint/${methodLower}/${slug}`, query })
+        } else {
+          // Path not found, show empty state
+          selectedOperation.value = null
+          selectedGroup.value = null
+        }
+      } else {
+        // Not a valid HTTP method, show empty state
+        selectedOperation.value = null
+        selectedGroup.value = null
+      }
+    } else {
+      // Path doesn't match expected format, show empty state
+      selectedOperation.value = null
+      selectedGroup.value = null
+    }
   }
 }
 
@@ -320,10 +409,6 @@ const loadSpecsFromUrl = async () => {
 
     if (loadedSpecs.length > 0) {
       specStore.setSpecs(loadedSpecs)
-      toast({
-        title: 'Loaded',
-        description: `Loaded ${loadedSpecs.length} specification(s)`,
-      })
     }
   } catch (error: any) {
     toast({
@@ -412,13 +497,17 @@ const handleOperationSelect = (method: string, path: string) => {
   // Update URL with slug - state will be restored from route
   const slug = endpointPathToSlug(path)
   const methodLower = method.toLowerCase()
-  router.push(`/endpoint/${methodLower}/${slug}`)
+  // Preserve spec query parameters when navigating
+  const query: Record<string, string | string[]> = { ...route.query }
+  router.push({ path: `/endpoint/${methodLower}/${slug}`, query })
 }
 
 const handleGroupSelect = (node: TagNode) => {
   // Update URL with slug - state will be restored from route
   const slug = toSlug(node.fullPath)
-  router.push(`/group/${slug}`)
+  // Preserve spec query parameters when navigating
+  const query: Record<string, string | string[]> = { ...route.query }
+  router.push({ path: `/group/${slug}`, query })
 }
 
 const handleBackToSelection = () => {

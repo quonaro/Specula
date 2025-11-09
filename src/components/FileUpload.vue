@@ -921,11 +921,6 @@ const handleLoadAllSelected = async () => {
     selectedFavorites.value = []
     selectedUrls.value = []
     loadedFiles.value = []
-
-    toast({
-      title: 'Success',
-      description: `Loaded ${allSpecs.length} specification(s)`,
-    })
   } catch (error: any) {
     toast({
       title: 'Error',
