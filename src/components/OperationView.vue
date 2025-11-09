@@ -1,7 +1,7 @@
 <template>
-  <ScrollArea class="h-screen">
-    <div class="p-8 space-y-6 max-w-5xl">
-      <!-- Header -->
+  <ScrollArea class="h-full">
+    <div class="p-8 space-y-6">
+      <!-- Header (Common for both columns) -->
       <div class="space-y-3">
         <div class="flex items-center gap-3">
           <Badge :class="`${getMethodColorClass(method)} text-white font-bold px-3 py-1`">
@@ -37,269 +37,464 @@
         </a>
       </div>
 
-      <!-- Try It Out -->
-      <Separator />
-      <TryItOut :method="method" :path="path" :operation="operation" :spec="spec" :source-url="sourceUrl" />
+      <div class="grid grid-cols-2 gap-6">
+        <!-- Main Content (Left Column) -->
+        <div class="space-y-6">
+          <!-- Operation-specific Servers -->
+          <template v-if="operation.servers && operation.servers.length > 0">
+            <Separator />
+            <ServersView :servers="operation.servers" title="Operation Servers" />
+          </template>
 
-      <!-- Operation-specific Servers -->
-      <template v-if="operation.servers && operation.servers.length > 0">
-        <Separator />
-        <ServersView :servers="operation.servers" title="Operation Servers" />
-      </template>
+          <!-- Parameters -->
+          <template v-if="operation.parameters && operation.parameters.length > 0">
+            <Separator />
+            <Card class="p-6 space-y-4">
+              <h3 class="text-lg font-semibold text-foreground">Parameters</h3>
+              <div class="space-y-3">
+                <div
+                  v-for="(param, idx) in operation.parameters"
+                  :key="idx"
+                  class="border border-border rounded-lg p-4 space-y-2"
+                >
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <code class="text-sm font-semibold text-foreground">
+                      {{ resolver.resolve(param).name }}
+                    </code>
+                    <Badge variant="outline" class="text-xs">
+                      {{ resolver.resolve(param).in }}
+                    </Badge>
+                    <Badge v-if="resolver.resolve(param).required" variant="destructive" class="text-xs">
+                      required
+                    </Badge>
+                    <Badge v-if="resolver.resolve(param).deprecated" variant="destructive" class="text-xs">
+                      deprecated
+                    </Badge>
+                  </div>
+                  <p v-if="resolver.resolve(param).description" class="text-sm text-muted-foreground">
+                    {{ resolver.resolve(param).description }}
+                  </p>
+                  <div v-if="resolver.resolve(param).schema" class="mt-2">
+                    <SchemaView :schema="resolver.resolve(param).schema!" :resolver="resolver" />
+                  </div>
+                  <div
+                    v-if="resolver.resolve(param).examples && Object.keys(resolver.resolve(param).examples || {}).length > 0"
+                    class="mt-2"
+                  >
+                    <span class="text-xs font-medium">Examples:</span>
+                    <div
+                      v-for="[exName, ex] in Object.entries(resolver.resolve(param).examples || {})"
+                      :key="exName"
+                      class="mt-1"
+                    >
+                      <Badge variant="secondary" class="text-xs mb-1">{{ exName }}</Badge>
+                      <p v-if="resolver.resolve(ex).description" class="text-xs text-muted-foreground">
+                        {{ resolver.resolve(ex).description }}
+                      </p>
+                      <pre
+                        v-if="resolver.resolve(ex).value !== undefined"
+                        class="text-xs bg-code-bg px-2 py-1 rounded mt-1"
+                      >
+                        {{ JSON.stringify(resolver.resolve(ex).value, null, 2) }}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </template>
 
-      <!-- Parameters -->
-      <template v-if="operation.parameters && operation.parameters.length > 0">
-        <Separator />
-        <Card class="p-6 space-y-4">
-          <h3 class="text-lg font-semibold text-foreground">Parameters</h3>
-          <div class="space-y-3">
-            <div
-              v-for="(param, idx) in operation.parameters"
-              :key="idx"
-              class="border border-border rounded-lg p-4 space-y-2"
-            >
-              <div class="flex items-center gap-2 flex-wrap">
-                <code class="text-sm font-semibold text-foreground">
-                  {{ resolver.resolve(param).name }}
-                </code>
-                <Badge variant="outline" class="text-xs">
-                  {{ resolver.resolve(param).in }}
-                </Badge>
-                <Badge v-if="resolver.resolve(param).required" variant="destructive" class="text-xs">
+          <!-- Request Body -->
+          <template v-if="operation.requestBody">
+            <Separator />
+            <Card class="p-6 space-y-4">
+              <h3 class="text-lg font-semibold text-foreground">Request Body</h3>
+              <template v-if="resolvedBody">
+                <p v-if="resolvedBody.description" class="text-sm text-muted-foreground">
+                  {{ resolvedBody.description }}
+                </p>
+                <Badge v-if="resolvedBody.required" variant="destructive" class="text-xs">
                   required
                 </Badge>
-                <Badge v-if="resolver.resolve(param).deprecated" variant="destructive" class="text-xs">
-                  deprecated
-                </Badge>
-              </div>
-              <p v-if="resolver.resolve(param).description" class="text-sm text-muted-foreground">
-                {{ resolver.resolve(param).description }}
-              </p>
-              <div v-if="resolver.resolve(param).schema" class="mt-2">
-                <SchemaView :schema="resolver.resolve(param).schema!" :resolver="resolver" />
-              </div>
-              <div
-                v-if="resolver.resolve(param).examples && Object.keys(resolver.resolve(param).examples || {}).length > 0"
-                class="mt-2"
-              >
-                <span class="text-xs font-medium">Examples:</span>
                 <div
-                  v-for="[exName, ex] in Object.entries(resolver.resolve(param).examples || {})"
-                  :key="exName"
-                  class="mt-1"
+                  v-for="[contentType, mediaType] in Object.entries(resolvedBody.content || {})"
+                  :key="contentType"
+                  class="space-y-3"
                 >
-                  <Badge variant="secondary" class="text-xs mb-1">{{ exName }}</Badge>
-                  <p v-if="resolver.resolve(ex).description" class="text-xs text-muted-foreground">
-                    {{ resolver.resolve(ex).description }}
-                  </p>
-                  <pre
-                    v-if="resolver.resolve(ex).value !== undefined"
-                    class="text-xs bg-code-bg px-2 py-1 rounded mt-1"
+                  <div class="text-sm font-medium text-foreground">
+                    Content-Type: <code>{{ contentType }}</code>
+                  </div>
+                  <SchemaView
+                    v-if="mediaType?.schema"
+                    :schema="mediaType.schema"
+                    title="Schema"
+                    :resolver="resolver"
+                  />
+                  <div
+                    v-if="mediaType?.examples && Object.keys(mediaType.examples).length > 0"
+                    class="space-y-2"
                   >
-                    {{ JSON.stringify(resolver.resolve(ex).value, null, 2) }}
-                  </pre>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </template>
-
-      <!-- Request Body -->
-      <template v-if="operation.requestBody">
-        <Separator />
-        <Card class="p-6 space-y-4">
-          <h3 class="text-lg font-semibold text-foreground">Request Body</h3>
-          <template v-if="resolvedBody">
-            <p v-if="resolvedBody.description" class="text-sm text-muted-foreground">
-              {{ resolvedBody.description }}
-            </p>
-            <Badge v-if="resolvedBody.required" variant="destructive" class="text-xs">
-              required
-            </Badge>
-            <div
-              v-for="[contentType, mediaType] in Object.entries(resolvedBody.content || {})"
-              :key="contentType"
-              class="space-y-3"
-            >
-              <div class="text-sm font-medium text-foreground">
-                Content-Type: <code>{{ contentType }}</code>
-              </div>
-              <SchemaView
-                v-if="mediaType?.schema"
-                :schema="mediaType.schema"
-                title="Schema"
-                :resolver="resolver"
-              />
-              <div
-                v-if="mediaType?.examples && Object.keys(mediaType.examples).length > 0"
-                class="space-y-2"
-              >
-                <h4 class="text-sm font-semibold">Examples:</h4>
-                <div
-                  v-for="[exName, ex] in Object.entries(mediaType.examples)"
-                  :key="exName"
-                >
-                  <Badge variant="secondary" class="mb-1">{{ exName }}</Badge>
-                  <p v-if="resolver.resolve(ex).description" class="text-sm text-muted-foreground">
-                    {{ resolver.resolve(ex).description }}
-                  </p>
-                  <pre
-                    v-if="resolver.resolve(ex).value !== undefined"
-                    class="bg-code-bg border border-code-border rounded-lg p-3 overflow-x-auto text-xs"
+                    <h4 class="text-sm font-semibold">Examples:</h4>
+                    <div
+                      v-for="[exName, ex] in Object.entries(mediaType.examples)"
+                      :key="exName"
+                    >
+                      <Badge variant="secondary" class="mb-1">{{ exName }}</Badge>
+                      <p v-if="resolver.resolve(ex).description" class="text-sm text-muted-foreground">
+                        {{ resolver.resolve(ex).description }}
+                      </p>
+                      <pre
+                        v-if="resolver.resolve(ex).value !== undefined"
+                        class="bg-code-bg border border-code-border rounded-lg p-3 overflow-x-auto text-xs"
+                      >
+                        {{ JSON.stringify(resolver.resolve(ex).value, null, 2) }}
+                      </pre>
+                    </div>
+                  </div>
+                  <div
+                    v-if="mediaType?.encoding && Object.keys(mediaType.encoding).length > 0"
+                    class="space-y-2"
                   >
-                    {{ JSON.stringify(resolver.resolve(ex).value, null, 2) }}
-                  </pre>
-                </div>
-              </div>
-              <div
-                v-if="mediaType?.encoding && Object.keys(mediaType.encoding).length > 0"
-                class="space-y-2"
-              >
-                <h4 class="text-sm font-semibold">Encoding:</h4>
-                <div
-                  v-for="[fieldName, encoding] in Object.entries(mediaType.encoding)"
-                  :key="fieldName"
-                  class="border border-border rounded p-2"
-                >
-                  <code class="text-xs font-semibold">{{ fieldName }}</code>
-                  <div v-if="encoding.contentType" class="text-xs text-muted-foreground">
-                    Content-Type: {{ encoding.contentType }}
+                    <h4 class="text-sm font-semibold">Encoding:</h4>
+                    <div
+                      v-for="[fieldName, encoding] in Object.entries(mediaType.encoding)"
+                      :key="fieldName"
+                      class="border border-border rounded p-2"
+                    >
+                      <code class="text-xs font-semibold">{{ fieldName }}</code>
+                      <div v-if="encoding.contentType" class="text-xs text-muted-foreground">
+                        Content-Type: {{ encoding.contentType }}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </template>
+            </Card>
           </template>
-        </Card>
-      </template>
 
-      <!-- Responses -->
-      <template v-if="operation.responses">
-        <Separator />
-        <Card class="p-6 space-y-4">
-          <h3 class="text-lg font-semibold text-foreground">Responses</h3>
-          <div class="space-y-4">
-            <div
-              v-for="[code, response] in Object.entries(operation.responses)"
-              :key="code"
-              class="border border-border rounded-lg p-4 space-y-3"
-            >
-              <div class="flex items-center gap-2">
-                <Badge :variant="code.startsWith('2') ? 'default' : 'destructive'">
-                  {{ code }}
-                </Badge>
-                <span class="text-sm text-foreground">
-                  {{ resolver.resolve(response).description }}
-                </span>
-              </div>
-              
-              <div
-                v-if="resolver.resolve(response).headers && Object.keys(resolver.resolve(response).headers || {}).length > 0"
-                class="space-y-2"
-              >
-                <h4 class="text-sm font-semibold">Headers:</h4>
+          <!-- Responses -->
+          <template v-if="operation.responses">
+            <Separator />
+            <Card class="p-6 space-y-4">
+              <h3 class="text-lg font-semibold text-foreground">Responses</h3>
+              <div class="space-y-4">
                 <div
-                  v-for="[headerName, header] in Object.entries(resolver.resolve(response).headers || {})"
-                  :key="headerName"
-                  class="text-sm"
+                  v-for="[code, response] in Object.entries(operation.responses)"
+                  :key="code"
+                  class="border border-border rounded-lg p-4 space-y-3"
                 >
-                  <code class="font-semibold">{{ headerName }}</code>
-                  <span v-if="resolver.resolve(header).description" class="text-muted-foreground ml-2">
-                    - {{ resolver.resolve(header).description }}
-                  </span>
+                  <div class="flex items-center gap-2">
+                    <Badge :variant="code.startsWith('2') ? 'default' : 'destructive'">
+                      {{ code }}
+                    </Badge>
+                    <span class="text-sm text-foreground">
+                      {{ resolver.resolve(response).description }}
+                    </span>
+                  </div>
+                  
+                  <div
+                    v-if="resolver.resolve(response).headers && Object.keys(resolver.resolve(response).headers || {}).length > 0"
+                    class="space-y-2"
+                  >
+                    <h4 class="text-sm font-semibold">Headers:</h4>
+                    <div
+                      v-for="[headerName, header] in Object.entries(resolver.resolve(response).headers || {})"
+                      :key="headerName"
+                      class="text-sm"
+                    >
+                      <code class="font-semibold">{{ headerName }}</code>
+                      <span v-if="resolver.resolve(header).description" class="text-muted-foreground ml-2">
+                        - {{ resolver.resolve(header).description }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div
+                    v-if="resolver.resolve(response).content"
+                    v-for="[contentType, mediaType] in Object.entries(resolver.resolve(response).content || {})"
+                    :key="contentType"
+                    class="space-y-2"
+                  >
+                    <div class="text-sm font-medium text-foreground">
+                      Content-Type: <code>{{ contentType }}</code>
+                    </div>
+                    <SchemaView
+                      v-if="mediaType?.schema"
+                      :schema="mediaType.schema"
+                      title="Schema"
+                      :resolver="resolver"
+                    />
+                    <div
+                      v-if="mediaType?.examples && Object.keys(mediaType.examples).length > 0"
+                      class="space-y-2"
+                    >
+                      <h4 class="text-sm font-semibold">Examples:</h4>
+                      <div
+                        v-for="[exName, ex] in Object.entries(mediaType.examples)"
+                        :key="exName"
+                      >
+                        <Badge variant="secondary" class="mb-1">{{ exName }}</Badge>
+                        <p v-if="resolver.resolve(ex).description" class="text-sm text-muted-foreground">
+                          {{ resolver.resolve(ex).description }}
+                        </p>
+                        <pre
+                          v-if="resolver.resolve(ex).value !== undefined"
+                          class="bg-code-bg border border-code-border rounded-lg p-3 overflow-x-auto text-xs"
+                        >
+                          {{ JSON.stringify(resolver.resolve(ex).value, null, 2) }}
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <LinksView
+                    v-if="resolver.resolve(response).links"
+                    :links="resolver.resolve(response).links!"
+                    :resolver="resolver"
+                  />
                 </div>
               </div>
+            </Card>
+          </template>
 
-              <div
-                v-if="resolver.resolve(response).content"
-                v-for="[contentType, mediaType] in Object.entries(resolver.resolve(response).content || {})"
-                :key="contentType"
-                class="space-y-2"
-              >
-                <div class="text-sm font-medium text-foreground">
-                  Content-Type: <code>{{ contentType }}</code>
-                </div>
-                <SchemaView
-                  v-if="mediaType?.schema"
-                  :schema="mediaType.schema"
-                  title="Schema"
-                  :resolver="resolver"
-                />
+          <!-- Callbacks -->
+          <template v-if="operation.callbacks && Object.keys(operation.callbacks).length > 0">
+            <Separator />
+            <CallbacksView :callbacks="operation.callbacks" :resolver="resolver" />
+          </template>
+        </div>
+
+        <!-- Try It Out (Right Column) -->
+        <div class="space-y-6 sticky top-8 self-start">
+          <!-- Security (Authorization) -->
+          <template v-if="operation.security && operation.security.length > 0">
+            <Separator />
+            <Card class="p-6 space-y-4">
+              <div class="flex items-center gap-2">
+                <Key class="w-5 h-5 text-primary" />
+                <h3 class="text-lg font-semibold text-foreground">Authorization</h3>
+              </div>
+              <div class="space-y-2">
                 <div
-                  v-if="mediaType?.examples && Object.keys(mediaType.examples).length > 0"
+                  v-for="(sec, idx) in operation.security"
+                  :key="idx"
                   class="space-y-2"
                 >
-                  <h4 class="text-sm font-semibold">Examples:</h4>
                   <div
-                    v-for="[exName, ex] in Object.entries(mediaType.examples)"
-                    :key="exName"
+                    v-for="[scheme, scopes] in Object.entries(sec)"
+                    :key="scheme"
+                    class="space-y-2"
                   >
-                    <Badge variant="secondary" class="mb-1">{{ exName }}</Badge>
-                    <p v-if="resolver.resolve(ex).description" class="text-sm text-muted-foreground">
-                      {{ resolver.resolve(ex).description }}
-                    </p>
-                    <pre
-                      v-if="resolver.resolve(ex).value !== undefined"
-                      class="bg-code-bg border border-code-border rounded-lg p-3 overflow-x-auto text-xs"
-                    >
-                      {{ JSON.stringify(resolver.resolve(ex).value, null, 2) }}
-                    </pre>
+                    <div class="flex items-center gap-2">
+                      <Badge variant="outline">{{ scheme }}</Badge>
+                      <span v-if="scopes.length > 0" class="text-sm text-muted-foreground">
+                        Scopes: {{ scopes.join(', ') }}
+                      </span>
+                    </div>
+                    <Input
+                      :placeholder="`Enter ${scheme} credentials`"
+                      type="password"
+                      class="w-full"
+                    />
                   </div>
                 </div>
               </div>
-              
-              <LinksView
-                v-if="resolver.resolve(response).links"
-                :links="resolver.resolve(response).links!"
-                :resolver="resolver"
-              />
-            </div>
-          </div>
-        </Card>
-      </template>
+            </Card>
+          </template>
+          <Separator />
 
-      <!-- Callbacks -->
-      <template v-if="operation.callbacks && Object.keys(operation.callbacks).length > 0">
-        <Separator />
-        <CallbacksView :callbacks="operation.callbacks" :resolver="resolver" />
-      </template>
-
-      <!-- Security -->
-      <template v-if="operation.security && operation.security.length > 0">
-        <Separator />
-        <Card class="p-6 space-y-4">
-          <h3 class="text-lg font-semibold text-foreground">Security</h3>
-          <div class="space-y-2">
-            <div
-              v-for="(sec, idx) in operation.security"
-              :key="idx"
-              class="flex gap-2 flex-wrap"
-            >
-              <Badge
-                v-for="[scheme, scopes] in Object.entries(sec)"
-                :key="scheme"
-                variant="outline"
+          <!-- Server URL -->
+          <Card class="p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <Server class="w-5 h-5 text-primary" />
+                <h3 class="text-lg font-semibold text-foreground">Server URL</h3>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                @click="isServerUrlLocked = !isServerUrlLocked"
+                class="h-7 px-2"
               >
-                {{ scheme }}{{ scopes.length > 0 ? `: ${scopes.join(', ')}` : '' }}
-              </Badge>
+                <Lock v-if="isServerUrlLocked" class="w-4 h-4" />
+                <Unlock v-else class="w-4 h-4" />
+              </Button>
             </div>
-          </div>
-        </Card>
-      </template>
+            <div class="space-y-2 border border-border rounded-md p-3 bg-muted/30">
+              <div
+                v-for="(server, idx) in availableServers"
+                :key="idx"
+                class="flex items-center gap-2"
+              >
+                <input
+                  type="radio"
+                  :id="`server-${idx}`"
+                  :value="server.url"
+                  :checked="selectedServer === server.url"
+                  @change="handleServerSelect(server.url)"
+                  class="h-4 w-4 text-primary focus:ring-primary"
+                />
+                <label
+                  :for="`server-${idx}`"
+                  class="flex-1 text-sm cursor-pointer"
+                >
+                  <div class="font-medium text-foreground">{{ server.url }}</div>
+                  <div v-if="server.label.includes('(')" class="text-xs text-muted-foreground">
+                    {{ server.label.match(/\(([^)]+)\)/)?.[1] || '' }}
+                  </div>
+                </label>
+              </div>
+              <div class="flex items-center gap-2">
+                <input
+                  type="radio"
+                  id="server-current-host"
+                  value="current-host"
+                  :checked="selectedServer === 'current-host'"
+                  @change="handleServerSelect('current-host')"
+                  class="h-4 w-4 text-primary focus:ring-primary"
+                />
+                <label
+                  for="server-current-host"
+                  class="flex-1 text-sm cursor-pointer font-medium text-foreground"
+                >
+                  Current Host ({{ getCurrentHostUrl() }})
+                </label>
+              </div>
+              <div class="flex items-center gap-2">
+                <input
+                  type="radio"
+                  id="server-custom"
+                  value="custom"
+                  :checked="selectedServer === 'custom'"
+                  @change="handleServerSelect('custom')"
+                  class="h-4 w-4 text-primary focus:ring-primary"
+                />
+                <label
+                  for="server-custom"
+                  class="flex-1 text-sm cursor-pointer font-medium text-foreground"
+                >
+                  Custom URL...
+                </label>
+              </div>
+            </div>
+            <Input
+              v-if="!isServerUrlLocked || selectedServer === 'custom' || selectedServer === 'current-host' || availableServers.length === 0"
+              :model-value="getCurrentServerUrl()"
+              @update:model-value="handleServerUrlUpdate"
+              :disabled="isServerUrlLocked && selectedServer !== 'custom' && selectedServer !== 'current-host' && availableServers.length > 0"
+              placeholder="https://api.example.com"
+            />
+          </Card>
+          <Separator />
+
+          <!-- Params -->
+          <TryItOut 
+            :method="method" 
+            :path="path" 
+            :operation="operation" 
+            :spec="spec" 
+            :source-url="sourceUrl"
+            :server-url="getCurrentServerUrl()"
+            @response="handleResponse"
+          />
+
+          <!-- Response -->
+          <Card class="p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <FileText class="w-5 h-5 text-primary" />
+                <h3 class="text-lg font-semibold text-foreground">Response</h3>
+              </div>
+              <Button
+                v-if="response"
+                variant="ghost"
+                size="sm"
+                @click="handleCopy(JSON.stringify(response, null, 2))"
+              >
+                <Check v-if="copied" class="w-4 h-4" />
+                <Copy v-else class="w-4 h-4" />
+              </Button>
+            </div>
+
+            <div v-if="!response" class="text-sm text-muted-foreground text-center py-8">
+              No response yet. Execute a request to see the response here.
+            </div>
+
+            <template v-else>
+              <Card v-if="response.error" class="p-4 bg-destructive/10 border-destructive">
+                <p class="text-sm font-semibold text-destructive">Error</p>
+                <p class="text-xs text-muted-foreground mt-1">
+                  {{ response.message }}
+                </p>
+              </Card>
+
+              <template v-else>
+                <div class="flex gap-2 flex-wrap">
+                  <Badge
+                    :variant="response.status >= 200 && response.status < 300 ? 'default' : 'destructive'"
+                  >
+                    {{ response.status }} {{ response.statusText }}
+                  </Badge>
+                  <Badge variant="outline">{{ response.duration }}ms</Badge>
+                </div>
+
+                <Tabs :model-value="responseTab" @update:model-value="responseTab = $event" class="w-full">
+                  <TabsList class="w-full">
+                    <TabsTrigger value="body" class="flex-1">Body</TabsTrigger>
+                    <TabsTrigger value="headers" class="flex-1">Headers</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="body">
+                    <ScrollArea class="h-[300px] w-full">
+                      <pre class="bg-code-bg border border-code-border rounded-lg p-3 text-xs overflow-x-auto">
+                        {{ typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2) }}
+                      </pre>
+                    </ScrollArea>
+                  </TabsContent>
+
+                  <TabsContent value="headers">
+                    <ScrollArea class="h-[300px] w-full">
+                      <div class="space-y-2">
+                        <div
+                          v-for="[key, value] in Object.entries(response.headers)"
+                          :key="key"
+                          class="border border-border rounded p-2"
+                        >
+                          <code class="text-xs font-semibold">{{ key }}</code>
+                          <p class="text-xs text-muted-foreground mt-1">
+                            {{ value as string }}
+                          </p>
+                        </div>
+                      </div>
+                    </ScrollArea>
+                  </TabsContent>
+                </Tabs>
+              </template>
+            </template>
+          </Card>
+        </div>
+      </div>
     </div>
   </ScrollArea>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { Lock, Unlock, Copy, Check, Key, Server, FileText } from 'lucide-vue-next'
 import type { Operation, OpenAPISpec, PathItem } from '@/types/openapi'
 import { RefResolver } from '@/utils/ref-resolver'
 import { isOperationPrivate } from '@/utils/openapi-parser'
 import { getMethodColorClass } from '@/utils/operation-cache'
 import Badge from './ui/Badge.vue'
 import Card from './ui/Card.vue'
+import Button from './ui/Button.vue'
+import Input from './ui/Input.vue'
 import ScrollArea from './ui/ScrollArea.vue'
 import Separator from './ui/Separator.vue'
+import Tabs from './ui/Tabs.vue'
+import TabsList from './ui/TabsList.vue'
+import TabsTrigger from './ui/TabsTrigger.vue'
+import TabsContent from './ui/TabsContent.vue'
 import SchemaView from './SchemaView.vue'
 import CallbacksView from './CallbacksView.vue'
 import LinksView from './LinksView.vue'
@@ -331,5 +526,172 @@ const pathItem = computed(() => {
 const isPrivate = computed(() => {
   return isOperationPrivate(props.operation, pathItem.value, props.spec)
 })
+
+// Server URL management
+const isServerUrlLocked = ref(true)
+const customServerUrl = ref('')
+const response = ref<any>(null)
+const copied = ref(false)
+const responseTab = ref('body')
+
+// Extract base URL from sourceUrl if it's a URL
+const extractBaseUrl = (url: string): string | null => {
+  try {
+    const urlObj = new URL(url)
+    return `${urlObj.protocol}//${urlObj.host}`
+  } catch {
+    return null
+  }
+}
+
+// Build list of available servers
+const availableServers = computed(() => {
+  const servers: Array<{ url: string; label: string }> = []
+  
+  // Add operation-specific servers
+  if (props.operation.servers && props.operation.servers.length > 0) {
+    props.operation.servers.forEach((server) => {
+      servers.push({
+        url: server.url,
+        label: server.description 
+          ? `${server.url} (${server.description})` 
+          : server.url
+      })
+    })
+  }
+  
+  // Add spec-level servers
+  if (props.spec.servers && props.spec.servers.length > 0) {
+    props.spec.servers.forEach((server) => {
+      // Avoid duplicates
+      if (!servers.some(s => s.url === server.url)) {
+        servers.push({
+          url: server.url,
+          label: server.description 
+            ? `${server.url} (${server.description})` 
+            : server.url
+        })
+      }
+    })
+  }
+  
+  // Add sourceUrl base URL if available
+  if (props.sourceUrl) {
+    const baseUrl = extractBaseUrl(props.sourceUrl)
+    if (baseUrl && !servers.some(s => s.url === baseUrl)) {
+      servers.push({
+        url: baseUrl,
+        label: `${baseUrl} (from spec URL)`
+      })
+    }
+  }
+  
+  return servers
+})
+
+// Initialize selected server
+const getInitialServer = (): string => {
+  if (props.operation.servers && props.operation.servers.length > 0) {
+    return props.operation.servers[0].url
+  }
+  if (props.spec.servers && props.spec.servers.length > 0) {
+    return props.spec.servers[0].url
+  }
+  if (props.sourceUrl) {
+    const baseUrl = extractBaseUrl(props.sourceUrl)
+    if (baseUrl) {
+      return baseUrl
+    }
+  }
+  return ''
+}
+
+const selectedServer = ref(getInitialServer())
+
+// Handle server selection from dropdown
+const handleServerSelect = (value: string) => {
+  selectedServer.value = value
+  if (value === 'custom') {
+    customServerUrl.value = ''
+  }
+}
+
+// Handle server URL input update
+const handleServerUrlUpdate = (value: string) => {
+  if (selectedServer.value === 'custom') {
+    customServerUrl.value = value
+  } else if (selectedServer.value === 'current-host') {
+    // If editing current-host URL and it doesn't match, switch to custom
+    const currentHost = getCurrentHostUrl()
+    if (value !== currentHost && value.trim() !== '') {
+      selectedServer.value = 'custom'
+      customServerUrl.value = value
+    }
+  } else if (!isServerUrlLocked.value) {
+    // When unlocked, allow editing any URL
+    // Check if the entered URL matches any available server
+    const matchingServer = availableServers.value.find(s => s.url === value)
+    if (matchingServer) {
+      // If it matches a server, select that server
+      selectedServer.value = matchingServer.url
+    } else if (value === getCurrentHostUrl()) {
+      // If it matches current host, select current-host
+      selectedServer.value = 'current-host'
+    } else if (value.trim() !== '') {
+      // If it doesn't match and is not empty, select custom
+      selectedServer.value = 'custom'
+      customServerUrl.value = value
+    } else {
+      // Empty value - keep current selection
+      selectedServer.value = value
+    }
+  } else {
+    // When locked, check if value matches any server
+    const matchingServer = availableServers.value.find(s => s.url === value)
+    if (matchingServer) {
+      selectedServer.value = matchingServer.url
+    } else if (value === getCurrentHostUrl()) {
+      // If it matches current host, select current-host
+      selectedServer.value = 'current-host'
+    } else if (value.trim() !== '') {
+      // If it doesn't match, switch to custom
+      selectedServer.value = 'custom'
+      customServerUrl.value = value
+    }
+  }
+}
+
+// Get current host URL
+const getCurrentHostUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.host}`
+  }
+  return ''
+}
+
+// Get current server URL for display
+const getCurrentServerUrl = (): string => {
+  if (selectedServer.value === 'custom') {
+    return customServerUrl.value
+  }
+  if (selectedServer.value === 'current-host') {
+    return getCurrentHostUrl()
+  }
+  return selectedServer.value
+}
+
+// Handle response from TryItOut
+const handleResponse = (responseData: any) => {
+  response.value = responseData
+}
+
+// Handle copy
+const handleCopy = (text: string) => {
+  navigator.clipboard.writeText(text)
+  copied.value = true
+  setTimeout(() => {
+    copied.value = false
+  }, 2000)
+}
 </script>
 

@@ -1,116 +1,130 @@
 <template>
   <Card class="p-6 space-y-4">
-    <div class="flex items-center gap-2">
-      <Play class="w-5 h-5 text-primary" />
-      <h3 class="text-lg font-semibold text-foreground">Try It Out</h3>
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <Settings class="w-5 h-5 text-primary" />
+        <h3 class="text-lg font-semibold text-foreground">Params</h3>
+      </div>
+      <div class="flex gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          @click="commandFormat = 'edit'"
+          :class="commandFormat === 'edit' ? 'bg-muted' : ''"
+        >
+          Edit
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          @click="commandFormat = 'curl'"
+          :class="commandFormat === 'curl' ? 'bg-muted' : ''"
+        >
+          cURL
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          @click="commandFormat = 'wget'"
+          :class="commandFormat === 'wget' ? 'bg-muted' : ''"
+        >
+          Wget
+        </Button>
+      </div>
     </div>
 
-      <!-- Server Selection -->
-      <div class="space-y-2">
-        <div class="flex items-center justify-between">
-          <label class="text-sm font-medium">Server URL</label>
-          <Button
-            variant="ghost"
-            size="sm"
-            @click="isServerUrlLocked = !isServerUrlLocked"
-            class="h-7 px-2"
-          >
-            <Lock v-if="isServerUrlLocked" class="w-4 h-4" />
-            <Unlock v-else class="w-4 h-4" />
-          </Button>
-        </div>
-        <div v-if="availableServers.length > 0" class="space-y-2">
-          <div class="space-y-2 border border-border rounded-md p-3 bg-muted/30">
-            <div
-              v-for="(server, idx) in availableServers"
-              :key="idx"
-              class="flex items-center gap-2"
-            >
-              <input
-                type="radio"
-                :id="`server-${idx}`"
-                :value="server.url"
-                :checked="selectedServer === server.url"
-                @change="handleServerSelect(server.url)"
-                class="h-4 w-4 text-primary focus:ring-primary"
-              />
-              <label
-                :for="`server-${idx}`"
-                class="flex-1 text-sm cursor-pointer"
-              >
-                <div class="font-medium text-foreground">{{ server.url }}</div>
-                <div v-if="server.label.includes('(')" class="text-xs text-muted-foreground">
-                  {{ server.label.match(/\(([^)]+)\)/)?.[1] || '' }}
-                </div>
-              </label>
-            </div>
-            <div class="flex items-center gap-2 pt-2 border-t border-border">
-              <input
-                type="radio"
-                id="server-custom"
-                value="custom"
-                :checked="selectedServer === 'custom'"
-                @change="handleServerSelect('custom')"
-                class="h-4 w-4 text-primary focus:ring-primary"
-              />
-              <label
-                for="server-custom"
-                class="flex-1 text-sm cursor-pointer font-medium text-foreground"
-              >
-                Custom URL...
-              </label>
-            </div>
+    <!-- Edit Mode: Parameters and Request Body -->
+    <template v-if="commandFormat === 'edit'">
+      <!-- Parameters -->
+      <div v-if="hasParameters" class="space-y-3">
+        <h4 class="text-sm font-semibold">Parameters</h4>
+        <div
+          v-for="(param, idx) in parameters"
+          :key="idx"
+          class="space-y-1"
+        >
+          <div class="flex items-center gap-2">
+            <label class="text-sm font-medium">
+              {{ resolver.resolve(param).name }}
+            </label>
+            <Badge variant="outline" class="text-xs">
+              {{ resolver.resolve(param).in }}
+            </Badge>
+            <Badge v-if="resolver.resolve(param).required" variant="destructive" class="text-xs">
+              required
+            </Badge>
+            <Badge v-if="isFileParameter(param)" variant="outline" class="text-xs">
+              file
+            </Badge>
           </div>
+          <p v-if="resolver.resolve(param).description" class="text-xs text-muted-foreground">
+            {{ resolver.resolve(param).description }}
+          </p>
+          <!-- File input for binary parameters -->
+          <div v-if="isFileParameter(param)" class="space-y-2">
+            <input
+              type="file"
+              :id="`file-param-${idx}`"
+              @change="(e: Event) => handleFileParamChange(resolver.resolve(param).name, e)"
+              class="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+            />
+            <p v-if="paramFileValues[resolver.resolve(param).name]" class="text-xs text-muted-foreground">
+              Selected: {{ paramFileValues[resolver.resolve(param).name]?.name }}
+            </p>
+          </div>
+          <!-- Regular input for non-file parameters -->
+          <Input
+            v-else
+            :model-value="paramValues[resolver.resolve(param).name] || ''"
+            @update:model-value="(val: string) => updateParamValue(resolver.resolve(param).name, val)"
+            :placeholder="`Enter ${resolver.resolve(param).name}`"
+          />
         </div>
-        <Input
-          v-if="!isServerUrlLocked || selectedServer === 'custom' || availableServers.length === 0"
-          :model-value="getCurrentServerUrl()"
-          @update:model-value="handleServerUrlUpdate"
-          :disabled="isServerUrlLocked && selectedServer !== 'custom' && availableServers.length > 0"
-          placeholder="https://api.example.com"
-        />
       </div>
-
-    <!-- Parameters -->
-    <div v-if="hasParameters" class="space-y-3">
-      <h4 class="text-sm font-semibold">Parameters</h4>
-      <div
-        v-for="(param, idx) in parameters"
-        :key="idx"
-        class="space-y-1"
-      >
-        <div class="flex items-center gap-2">
-          <label class="text-sm font-medium">
-            {{ resolver.resolve(param).name }}
-          </label>
-          <Badge variant="outline" class="text-xs">
-            {{ resolver.resolve(param).in }}
-          </Badge>
-          <Badge v-if="resolver.resolve(param).required" variant="destructive" class="text-xs">
-            required
-          </Badge>
-        </div>
-        <p v-if="resolver.resolve(param).description" class="text-xs text-muted-foreground">
-          {{ resolver.resolve(param).description }}
-        </p>
-        <Input
-          :model-value="paramValues[resolver.resolve(param).name] || ''"
-          @update:model-value="(val: string) => updateParamValue(resolver.resolve(param).name, val)"
-          :placeholder="`Enter ${resolver.resolve(param).name}`"
-        />
-      </div>
-    </div>
 
       <!-- Request Body -->
       <div v-if="hasRequestBody" class="space-y-2">
         <h4 class="text-sm font-semibold">Request Body</h4>
+        <!-- File upload for binary/multipart request body -->
+        <div v-if="isRequestBodyFile" class="space-y-2">
+          <input
+            type="file"
+            id="request-body-file"
+            @change="handleRequestBodyFileChange"
+            class="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+          />
+          <p v-if="requestBodyFile" class="text-xs text-muted-foreground">
+            Selected: {{ requestBodyFile.name }}
+          </p>
+        </div>
+        <!-- JSON textarea for JSON request body -->
         <Textarea
+          v-else
           :model-value="requestBody"
           @update:model-value="requestBody = $event"
           placeholder="Enter JSON request body"
           class="font-mono text-xs min-h-[150px]"
         />
       </div>
+    </template>
+
+    <!-- Command Preview (curl/wget) -->
+    <template v-else>
+      <div class="space-y-2">
+        <div class="relative">
+          <pre class="bg-code-bg border border-code-border rounded-lg p-3 text-xs overflow-x-auto font-mono min-h-[100px] max-h-[300px] overflow-y-auto">{{ generatedCommand }}</pre>
+          <Button
+            variant="ghost"
+            size="sm"
+            @click="handleCopyCommand(generatedCommand)"
+            class="absolute top-2 right-2"
+          >
+            <Check v-if="commandCopied" class="w-4 h-4" />
+            <Copy v-else class="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </template>
 
     <!-- Execute Button -->
     <Button
@@ -121,87 +135,17 @@
       <Play class="w-4 h-4 mr-2" />
       {{ isExecuting ? 'Executing...' : 'Execute' }}
     </Button>
-
-    <!-- Response -->
-    <div v-if="response" class="space-y-3 pt-4 border-t">
-      <div class="flex items-center justify-between">
-        <h4 class="text-sm font-semibold">Response</h4>
-        <Button
-          variant="ghost"
-          size="sm"
-          @click="handleCopy(JSON.stringify(response, null, 2))"
-        >
-          <Check v-if="copied" class="w-4 h-4" />
-          <Copy v-else class="w-4 h-4" />
-        </Button>
-      </div>
-
-      <Card v-if="response.error" class="p-4 bg-destructive/10 border-destructive">
-        <p class="text-sm font-semibold text-destructive">Error</p>
-        <p class="text-xs text-muted-foreground mt-1">
-          {{ response.message }}
-        </p>
-      </Card>
-
-      <template v-else>
-        <div class="flex gap-2 flex-wrap">
-          <Badge
-            :variant="response.status >= 200 && response.status < 300 ? 'default' : 'destructive'"
-          >
-            {{ response.status }} {{ response.statusText }}
-          </Badge>
-          <Badge variant="outline">{{ response.duration }}ms</Badge>
-        </div>
-
-        <Tabs :model-value="responseTab" @update:model-value="responseTab = $event" class="w-full">
-          <TabsList class="w-full">
-            <TabsTrigger value="body" class="flex-1">Body</TabsTrigger>
-            <TabsTrigger value="headers" class="flex-1">Headers</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="body">
-            <ScrollArea class="h-[300px] w-full">
-              <pre class="bg-code-bg border border-code-border rounded-lg p-3 text-xs overflow-x-auto">
-                {{ typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2) }}
-              </pre>
-            </ScrollArea>
-          </TabsContent>
-
-          <TabsContent value="headers">
-            <ScrollArea class="h-[300px] w-full">
-              <div class="space-y-2">
-                <div
-                  v-for="[key, value] in Object.entries(response.headers)"
-                  :key="key"
-                  class="border border-border rounded p-2"
-                >
-                  <code class="text-xs font-semibold">{{ key }}</code>
-                  <p class="text-xs text-muted-foreground mt-1">
-                    {{ value as string }}
-                  </p>
-                </div>
-              </div>
-            </ScrollArea>
-          </TabsContent>
-        </Tabs>
-      </template>
-    </div>
   </Card>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { Play, Copy, Check, Lock, Unlock } from 'lucide-vue-next'
+import { Play, Copy, Check, Settings } from 'lucide-vue-next'
 import Card from './ui/Card.vue'
 import Button from './ui/Button.vue'
 import Input from './ui/Input.vue'
 import Textarea from './ui/Textarea.vue'
 import Badge from './ui/Badge.vue'
-import ScrollArea from './ui/ScrollArea.vue'
-import Tabs from './ui/Tabs.vue'
-import TabsList from './ui/TabsList.vue'
-import TabsTrigger from './ui/TabsTrigger.vue'
-import TabsContent from './ui/TabsContent.vue'
 import { useToast } from '@/composables/useToast'
 import type { Operation, OpenAPISpec } from '@/types/openapi'
 import { RefResolver } from '@/utils/ref-resolver'
@@ -212,142 +156,25 @@ interface Props {
   operation: Operation
   spec: OpenAPISpec
   sourceUrl?: string
+  serverUrl?: string
 }
 
 const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  response: [response: any]
+}>()
 
 const { toast } = useToast()
 const resolver = new RefResolver(props.spec)
 const isExecuting = ref(false)
 const response = ref<any>(null)
-const copied = ref(false)
-const responseTab = ref('body')
 const paramValues = ref<Record<string, string>>({})
+const paramFileValues = ref<Record<string, File>>({})
 const requestBody = ref('{}')
-const customServerUrl = ref('')
-const isServerUrlLocked = ref(true)
-
-// Extract base URL from sourceUrl if it's a URL
-const extractBaseUrl = (url: string): string | null => {
-  try {
-    const urlObj = new URL(url)
-    return `${urlObj.protocol}//${urlObj.host}`
-  } catch {
-    return null
-  }
-}
-
-// Build list of available servers
-const availableServers = computed(() => {
-  const servers: Array<{ url: string; label: string }> = []
-  
-  // Add operation-specific servers
-  if (props.operation.servers && props.operation.servers.length > 0) {
-    props.operation.servers.forEach((server, idx) => {
-      servers.push({
-        url: server.url,
-        label: server.description 
-          ? `${server.url} (${server.description})` 
-          : server.url
-      })
-    })
-  }
-  
-  // Add spec-level servers
-  if (props.spec.servers && props.spec.servers.length > 0) {
-    props.spec.servers.forEach((server, idx) => {
-      // Avoid duplicates
-      if (!servers.some(s => s.url === server.url)) {
-        servers.push({
-          url: server.url,
-          label: server.description 
-            ? `${server.url} (${server.description})` 
-            : server.url
-        })
-      }
-    })
-  }
-  
-  // Add sourceUrl base URL if available
-  if (props.sourceUrl) {
-    const baseUrl = extractBaseUrl(props.sourceUrl)
-    if (baseUrl && !servers.some(s => s.url === baseUrl)) {
-      servers.push({
-        url: baseUrl,
-        label: `${baseUrl} (from spec URL)`
-      })
-    }
-  }
-  
-  return servers
-})
-
-// Initialize selected server
-const getInitialServer = (): string => {
-  if (props.operation.servers && props.operation.servers.length > 0) {
-    return props.operation.servers[0].url
-  }
-  if (props.spec.servers && props.spec.servers.length > 0) {
-    return props.spec.servers[0].url
-  }
-  if (props.sourceUrl) {
-    const baseUrl = extractBaseUrl(props.sourceUrl)
-    if (baseUrl) {
-      return baseUrl
-    }
-  }
-  return ''
-}
-
-const selectedServer = ref(getInitialServer())
-
-// Handle server selection from dropdown
-const handleServerSelect = (value: string) => {
-  selectedServer.value = value
-  if (value === 'custom') {
-    customServerUrl.value = ''
-  }
-}
-
-// Handle server URL input update
-const handleServerUrlUpdate = (value: string) => {
-  if (selectedServer.value === 'custom') {
-    customServerUrl.value = value
-  } else if (!isServerUrlLocked.value) {
-    // When unlocked, allow editing any URL
-    // Check if the entered URL matches any available server
-    const matchingServer = availableServers.value.find(s => s.url === value)
-    if (matchingServer) {
-      // If it matches a server, select that server
-      selectedServer.value = matchingServer.url
-    } else if (value.trim() !== '') {
-      // If it doesn't match and is not empty, select custom
-      selectedServer.value = 'custom'
-      customServerUrl.value = value
-    } else {
-      // Empty value - keep current selection
-      selectedServer.value = value
-    }
-  } else {
-    // When locked, check if value matches any server
-    const matchingServer = availableServers.value.find(s => s.url === value)
-    if (matchingServer) {
-      selectedServer.value = matchingServer.url
-    } else if (value.trim() !== '') {
-      // If it doesn't match, switch to custom
-      selectedServer.value = 'custom'
-      customServerUrl.value = value
-    }
-  }
-}
-
-// Get current server URL for display
-const getCurrentServerUrl = (): string => {
-  if (selectedServer.value === 'custom') {
-    return customServerUrl.value
-  }
-  return selectedServer.value
-}
+const requestBodyFile = ref<File | null>(null)
+const commandFormat = ref<'edit' | 'curl' | 'wget'>('edit')
+const commandCopied = ref(false)
 
 const parameters = computed(() => props.operation.parameters || [])
 const hasParameters = computed(() => parameters.value.length > 0)
@@ -496,6 +323,63 @@ const updateParamValue = (name: string, value: string) => {
   paramValues.value = { ...paramValues.value, [name]: value }
 }
 
+// Check if parameter is a file (type: string, format: binary)
+const isFileParameter = (param: any): boolean => {
+  const resolved = resolver.resolve(param)
+  if (resolved.schema) {
+    const schema = resolver.resolve(resolved.schema)
+    return schema.type === 'string' && schema.format === 'binary'
+  }
+  if (resolved.content) {
+    // Check if content type indicates binary
+    const contentTypes = Object.keys(resolved.content)
+    return contentTypes.some(ct => 
+      ct.includes('octet-stream') || 
+      ct.includes('binary') ||
+      ct.includes('multipart')
+    )
+  }
+  return false
+}
+
+// Handle file parameter change
+const handleFileParamChange = (name: string, event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (file) {
+    paramFileValues.value = { ...paramFileValues.value, [name]: file }
+    // Clear text value for this parameter
+    const { [name]: _, ...rest } = paramValues.value
+    paramValues.value = rest
+  } else {
+    const { [name]: _, ...rest } = paramFileValues.value
+    paramFileValues.value = rest
+  }
+}
+
+// Check if request body should be a file
+const isRequestBodyFile = computed(() => {
+  if (!resolvedBody.value || !resolvedBody.value.content) {
+    return false
+  }
+  const contentTypes = Object.keys(resolvedBody.value.content)
+  return contentTypes.some(ct => 
+    ct.includes('multipart/form-data') || 
+    ct.includes('application/octet-stream') ||
+    ct.includes('*/*')
+  )
+})
+
+// Handle request body file change
+const handleRequestBodyFileChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  requestBodyFile.value = file || null
+  if (file) {
+    requestBody.value = ''
+  }
+}
+
 // Initialize requestBody with example when component mounts or operation changes
 const initializeRequestBody = () => {
   if (hasRequestBody.value) {
@@ -507,6 +391,9 @@ const initializeRequestBody = () => {
 // Watch for operation changes and reinitialize
 watch(() => [props.operation, props.path, props.method], () => {
   initializeRequestBody()
+  // Clear file values when operation changes
+  paramFileValues.value = {}
+  requestBodyFile.value = null
 }, { immediate: false, deep: false })
 
 // Initialize on mount
@@ -514,12 +401,229 @@ onMounted(() => {
   initializeRequestBody()
 })
 
+// Build request URL with path and query parameters
+const buildRequestUrl = (): string => {
+  const serverUrl = props.serverUrl || ''
+  if (!serverUrl) return ''
+  
+  let url = serverUrl + props.path
+  const queryParams: string[] = []
+
+  parameters.value.forEach((param) => {
+    const resolvedParam = resolver.resolve(param)
+    const value = paramValues.value[resolvedParam.name]
+    
+    if (value) {
+      if (resolvedParam.in === 'path') {
+        url = url.replace(`{${resolvedParam.name}}`, encodeURIComponent(value))
+      } else if (resolvedParam.in === 'query') {
+        queryParams.push(`${encodeURIComponent(resolvedParam.name)}=${encodeURIComponent(value)}`)
+      }
+    }
+  })
+
+  if (queryParams.length > 0) {
+    url += '?' + queryParams.join('&')
+  }
+  
+  return url
+}
+
+// Get request headers
+const getRequestHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {}
+  
+  // Add header parameters
+  parameters.value.forEach((param) => {
+    const resolvedParam = resolver.resolve(param)
+    const value = paramValues.value[resolvedParam.name]
+    if (value && resolvedParam.in === 'header') {
+      headers[resolvedParam.name] = value
+    }
+  })
+  
+  // Add content type if needed
+  if (hasRequestBody.value && resolvedBody.value?.content) {
+    const requestBodyContentType = Object.keys(resolvedBody.value.content)[0]
+    const isMultipartBody = requestBodyContentType?.includes('multipart/form-data')
+    const isOctetStreamBody = requestBodyContentType?.includes('application/octet-stream') || 
+                              requestBodyContentType?.includes('*/*')
+    
+    if (!isMultipartBody) {
+      if (isOctetStreamBody && requestBodyFile.value) {
+        headers['Content-Type'] = requestBodyContentType || 'application/octet-stream'
+      } else if (!isRequestBodyFile.value && requestBody.value) {
+        headers['Content-Type'] = 'application/json'
+      }
+    }
+  }
+  
+  return headers
+}
+
+// Generate curl command
+const generateCurlCommand = (): string => {
+  const url = buildRequestUrl()
+  if (!url) return '# No server URL configured'
+  
+  const method = props.method.toUpperCase()
+  const headers = getRequestHeaders()
+  const parts: string[] = ['curl']
+  
+  // Add method
+  if (method !== 'GET') {
+    parts.push(`-X ${method}`)
+  }
+  
+  // Add headers
+  Object.entries(headers).forEach(([key, value]) => {
+    parts.push(`-H "${key}: ${value}"`)
+  })
+  
+  // Handle request body
+  const hasFileParams = Object.keys(paramFileValues.value).length > 0
+  const hasFileRequestBody = requestBodyFile.value !== null
+  
+  if (hasFileParams || (hasFileRequestBody && isRequestBodyFile.value)) {
+    // For multipart/form-data, we need to add form fields
+    const requestBodyContentType = hasRequestBody.value && resolvedBody.value?.content 
+      ? Object.keys(resolvedBody.value.content)[0] 
+      : null
+    const isMultipartBody = requestBodyContentType?.includes('multipart/form-data')
+    
+    if (isMultipartBody || hasFileParams) {
+      // Add file parameters
+      parameters.value.forEach((param) => {
+        const resolvedParam = resolver.resolve(param)
+        const file = paramFileValues.value[resolvedParam.name]
+        if (file) {
+          parts.push(`-F "${resolvedParam.name}=@${file.name}"`)
+        } else {
+          const value = paramValues.value[resolvedParam.name]
+          if (value && resolvedParam.in !== 'header' && resolvedParam.in !== 'path' && resolvedParam.in !== 'query') {
+            parts.push(`-F "${resolvedParam.name}=${value}"`)
+          }
+        }
+      })
+      
+      // Add request body file
+      if (hasFileRequestBody && requestBodyFile.value && isMultipartBody) {
+        parts.push(`-F "file=@${requestBodyFile.value.name}"`)
+      }
+    } else if (hasFileRequestBody && requestBodyFile.value) {
+      // Binary file upload
+      parts.push(`--data-binary "@${requestBodyFile.value.name}"`)
+    }
+  } else if (hasRequestBody.value && requestBody.value && method !== 'GET' && method !== 'HEAD') {
+    // JSON body
+    try {
+      const bodyObj = JSON.parse(requestBody.value)
+      const bodyStr = JSON.stringify(bodyObj)
+      // Escape single quotes and wrap in single quotes, or use double quotes
+      const escapedBody = bodyStr.replace(/\\/g, '\\\\').replace(/'/g, "'\\''")
+      parts.push(`-d '${escapedBody}'`)
+    } catch {
+      // If not valid JSON, escape and use as-is
+      const escapedBody = requestBody.value.replace(/\\/g, '\\\\').replace(/'/g, "'\\''")
+      parts.push(`-d '${escapedBody}'`)
+    }
+  }
+  
+  // Add URL
+  parts.push(`"${url}"`)
+  
+  return parts.join(' \\\n  ')
+}
+
+// Generate wget command
+const generateWgetCommand = (): string => {
+  const url = buildRequestUrl()
+  if (!url) return '# No server URL configured'
+  
+  const method = props.method.toUpperCase()
+  const headers = getRequestHeaders()
+  const parts: string[] = ['wget']
+  
+  // Wget doesn't support all HTTP methods well, so we use --method
+  if (method !== 'GET') {
+    parts.push(`--method=${method}`)
+  }
+  
+  // Add headers
+  Object.entries(headers).forEach(([key, value]) => {
+    parts.push(`--header="${key}: ${value}"`)
+  })
+  
+  // Handle request body
+  const hasFileParams = Object.keys(paramFileValues.value).length > 0
+  const hasFileRequestBody = requestBodyFile.value !== null
+  
+  if (hasFileParams || (hasFileRequestBody && isRequestBodyFile.value)) {
+    // Wget has limited support for multipart/form-data
+    // We'll show a note about this limitation
+    const requestBodyContentType = hasRequestBody.value && resolvedBody.value?.content 
+      ? Object.keys(resolvedBody.value.content)[0] 
+      : null
+    const isMultipartBody = requestBodyContentType?.includes('multipart/form-data')
+    
+    if (isMultipartBody || hasFileParams) {
+      // Generate curl command as alternative
+      const curlCmd = generateCurlCommand()
+      return `# Wget has limited support for multipart/form-data and file uploads.\n# Consider using curl for file uploads:\n#\n# ${curlCmd.replace(/\n/g, '\n# ')}`
+    } else if (hasFileRequestBody && requestBodyFile.value) {
+      parts.push(`--body-file="${requestBodyFile.value.name}"`)
+    }
+  } else if (hasRequestBody.value && requestBody.value && method !== 'GET' && method !== 'HEAD') {
+    // JSON body - use --post-data
+    try {
+      const bodyObj = JSON.parse(requestBody.value)
+      const bodyStr = JSON.stringify(bodyObj)
+      // Escape single quotes and wrap in single quotes
+      const escapedBody = bodyStr.replace(/\\/g, '\\\\').replace(/'/g, "'\\''")
+      parts.push(`--post-data='${escapedBody}'`)
+    } catch {
+      // If not valid JSON, escape and use as-is
+      const escapedBody = requestBody.value.replace(/\\/g, '\\\\').replace(/'/g, "'\\''")
+      parts.push(`--post-data='${escapedBody}'`)
+    }
+  }
+  
+  // Add URL
+  parts.push(`"${url}"`)
+  
+  return parts.join(' \\\n  ')
+}
+
+// Computed property for generated command
+const generatedCommand = computed(() => {
+  if (commandFormat.value === 'edit') {
+    return ''
+  } else if (commandFormat.value === 'curl') {
+    return generateCurlCommand()
+  } else {
+    return generateWgetCommand()
+  }
+})
+
+// Handle copy command
+const handleCopyCommand = (command: string) => {
+  navigator.clipboard.writeText(command)
+  commandCopied.value = true
+  setTimeout(() => {
+    commandCopied.value = false
+  }, 2000)
+  toast({
+    title: 'Copied!',
+    description: 'Command copied to clipboard',
+  })
+}
+
 const handleExecute = async () => {
   isExecuting.value = true
   response.value = null
 
   try {
-    const serverUrl = selectedServer.value === 'custom' ? customServerUrl.value : selectedServer.value
+    const serverUrl = props.serverUrl || ''
     if (!serverUrl) {
       toast({
         title: 'Server URL required',
@@ -550,10 +654,22 @@ const handleExecute = async () => {
       url += '?' + queryParams.join('&')
     }
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
+    // Check if we have file parameters or file request body
+    const hasFileParams = Object.keys(paramFileValues.value).length > 0
+    const hasFileRequestBody = requestBodyFile.value !== null
+    
+    // Determine content type for request body
+    const requestBodyContentType = hasRequestBody.value && resolvedBody.value?.content 
+      ? Object.keys(resolvedBody.value.content)[0] 
+      : null
+    const isMultipartBody = requestBodyContentType?.includes('multipart/form-data')
+    const isOctetStreamBody = requestBodyContentType?.includes('application/octet-stream') || 
+                              requestBodyContentType?.includes('*/*')
 
+    const headers: Record<string, string> = {}
+    let body: BodyInit | undefined
+
+    // Handle header parameters (always add them)
     parameters.value.forEach((param) => {
       const resolvedParam = resolver.resolve(param)
       const value = paramValues.value[resolvedParam.name]
@@ -562,24 +678,86 @@ const handleExecute = async () => {
       }
     })
 
+    // Handle file request body with application/octet-stream (send file directly)
+    if (hasFileRequestBody && requestBodyFile.value && isOctetStreamBody && !isMultipartBody) {
+      body = requestBodyFile.value
+      headers['Content-Type'] = requestBodyContentType || 'application/octet-stream'
+    }
+    // Handle multipart/form-data or file parameters (use FormData)
+    else if (hasFileParams || (hasFileRequestBody && isMultipartBody)) {
+      const formData = new FormData()
+
+      // Add file parameters to FormData
+      parameters.value.forEach((param) => {
+        const resolvedParam = resolver.resolve(param)
+        const file = paramFileValues.value[resolvedParam.name]
+        if (file) {
+          formData.append(resolvedParam.name, file)
+        } else {
+          const value = paramValues.value[resolvedParam.name]
+          if (value && resolvedParam.in !== 'header' && resolvedParam.in !== 'path' && resolvedParam.in !== 'query') {
+            formData.append(resolvedParam.name, value)
+          }
+        }
+      })
+
+      // Add request body file to FormData
+      if (hasFileRequestBody && requestBodyFile.value && isMultipartBody) {
+        const mediaType = resolvedBody.value?.content[requestBodyContentType!]
+        if (mediaType?.schema) {
+          const schema = resolver.resolve(mediaType.schema)
+          if (schema.type === 'object' && schema.properties) {
+            // Find file property
+            const fileProp = Object.keys(schema.properties).find(key => {
+              const propSchema = resolver.resolve(schema.properties![key])
+              return propSchema.type === 'string' && propSchema.format === 'binary'
+            })
+            if (fileProp) {
+              formData.append(fileProp, requestBodyFile.value)
+            } else {
+              formData.append('file', requestBodyFile.value)
+            }
+          } else {
+            formData.append('file', requestBodyFile.value)
+          }
+        } else {
+          formData.append('file', requestBodyFile.value)
+        }
+      }
+
+      body = formData
+      // Don't set Content-Type header for FormData - browser will set it with boundary
+    }
+    // Regular JSON request
+    else {
+      headers['Content-Type'] = 'application/json'
+
+      // Add request body for non-GET/HEAD requests
+      if (props.method.toLowerCase() !== 'get' && props.method.toLowerCase() !== 'head') {
+        if (hasRequestBody.value && requestBody.value) {
+          try {
+            const bodyObj = JSON.parse(requestBody.value)
+            body = JSON.stringify(bodyObj)
+          } catch (e) {
+            toast({
+              title: 'Invalid JSON',
+              description: 'Request body must be valid JSON',
+              variant: 'destructive',
+            })
+            isExecuting.value = false
+            return
+          }
+        }
+      }
+    }
+
     const options: RequestInit = {
       method: props.method.toUpperCase(),
       headers,
     }
 
-    if (props.method.toLowerCase() !== 'get' && props.method.toLowerCase() !== 'head') {
-      try {
-        const bodyObj = JSON.parse(requestBody.value)
-        options.body = JSON.stringify(bodyObj)
-      } catch (e) {
-        toast({
-          title: 'Invalid JSON',
-          description: 'Request body must be valid JSON',
-          variant: 'destructive',
-        })
-        isExecuting.value = false
-        return
-      }
+    if (body !== undefined) {
+      options.body = body
     }
 
     const startTime = Date.now()
@@ -609,17 +787,21 @@ const handleExecute = async () => {
       url,
     }
 
+    emit('response', response.value)
+
     toast({
       title: `Response: ${res.status}`,
       description: `Request completed in ${duration}ms`,
     })
   } catch (error: any) {
-    const serverUrl = selectedServer.value === 'custom' ? customServerUrl.value : selectedServer.value
+    const serverUrl = props.serverUrl || ''
     response.value = {
       error: true,
       message: error.message,
       url: (serverUrl || '') + props.path,
     }
+
+    emit('response', response.value)
     
     toast({
       title: 'Request Failed',
@@ -631,16 +813,5 @@ const handleExecute = async () => {
   }
 }
 
-const handleCopy = (text: string) => {
-  navigator.clipboard.writeText(text)
-  copied.value = true
-  setTimeout(() => {
-    copied.value = false
-  }, 2000)
-  toast({
-    title: 'Copied!',
-    description: 'Response copied to clipboard',
-  })
-}
 </script>
 
