@@ -35,6 +35,15 @@
           </div>
           <div class="flex items-center gap-2">
             <Button 
+              v-if="hasSecuritySchemes"
+              variant="outline" 
+              size="sm" 
+              @click="handleAuthorizationClick"
+            >
+              <Key class="h-4 w-4 mr-2" />
+              Authorization
+            </Button>
+            <Button 
               variant="outline" 
               size="sm" 
               @click="handleBackToSelection"
@@ -114,19 +123,56 @@
       v-model="showDownloadDialog"
       :specs="specStore.specs"
     />
+    
+    <!-- Authorization Settings Dialog -->
+    <AuthorizationSettingsDialog
+      v-if="selectedSpecForAuth"
+      v-model="showAuthorizationDialog"
+      :spec="selectedSpecForAuth.spec"
+      :source-url="selectedSpecForAuth.sourceUrl"
+    />
+    
+    <!-- Spec Selection Dialog for Authorization -->
+    <Dialog
+      v-model="showSpecSelectionDialog"
+      title="Select Specification"
+      :close-on-backdrop="true"
+    >
+      <div class="space-y-4">
+        <p class="text-sm text-muted-foreground">
+          Select a specification to configure authorization credentials.
+        </p>
+        <div class="space-y-2">
+          <Button
+            v-for="(specWithSource, idx) in specsWithSecuritySchemes"
+            :key="idx"
+            variant="outline"
+            size="sm"
+            @click="selectSpecForAuthorization(specWithSource)"
+            class="w-full justify-start"
+          >
+            <Key class="w-4 h-4 mr-2" />
+            {{ specWithSource.spec?.info?.title || specWithSource.title || 'Untitled Specification' }}
+          </Button>
+        </div>
+      </div>
+    </Dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Download, ArrowLeft } from 'lucide-vue-next'
+import { Download, ArrowLeft, Key } from 'lucide-vue-next'
 import Sidebar from '@/components/Sidebar.vue'
 import OperationView from '@/components/OperationView.vue'
 import GroupEndpointsView from '@/components/GroupEndpointsView.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import DownloadDialog from '@/components/DownloadDialog.vue'
+import AuthorizationSettingsDialog from '@/components/AuthorizationSettingsDialog.vue'
+import Dialog from '@/components/ui/Dialog.vue'
 import Button from '@/components/ui/Button.vue'
+import type { SpecWithSource } from '@/stores/spec'
 import { useToast } from '@/composables/useToast'
 import { useSpecStore } from '@/stores/spec'
 import { useSpecCacheStore, isHash } from '@/stores/specCache'
@@ -147,6 +193,53 @@ const tagTree = ref<TagNode | null>(null)
 const selectedOperation = ref<{ method: string; path: string } | null>(null)
 const selectedGroup = ref<TagNode | null>(null)
 const showDownloadDialog = ref(false)
+const showAuthorizationDialog = ref(false)
+const showSpecSelectionDialog = ref(false)
+const selectedSpecForAuth = ref<SpecWithSource | null>(null)
+
+// Check if any spec has security schemes
+const hasSecuritySchemes = computed(() => {
+  return specStore.specs.some(spec => {
+    const securitySchemes = spec.spec?.components?.securitySchemes
+    return securitySchemes && Object.keys(securitySchemes).length > 0
+  })
+})
+
+// Get specs that have security schemes
+const specsWithSecuritySchemes = computed(() => {
+  return specStore.specs.filter(spec => {
+    const securitySchemes = spec.spec?.components?.securitySchemes
+    return securitySchemes && Object.keys(securitySchemes).length > 0
+  })
+})
+
+// Handle authorization button click
+const handleAuthorizationClick = () => {
+  const specsWithSecurity = specsWithSecuritySchemes.value
+  if (specsWithSecurity.length === 1) {
+    // Only one spec with security schemes: open dialog directly
+    selectedSpecForAuth.value = specsWithSecurity[0]
+    showAuthorizationDialog.value = true
+  } else if (specsWithSecurity.length > 1) {
+    // Multiple specs with security schemes: show selection dialog
+    showSpecSelectionDialog.value = true
+  }
+}
+
+// Select spec for authorization
+const selectSpecForAuthorization = (specWithSource: SpecWithSource) => {
+  selectedSpecForAuth.value = specWithSource
+  showSpecSelectionDialog.value = false
+  showAuthorizationDialog.value = true
+}
+
+// Watch for dialog close and clear selection
+watch(showAuthorizationDialog, (isOpen) => {
+  if (!isOpen) {
+    // Clear selection when dialog closes
+    selectedSpecForAuth.value = null
+  }
+})
 
 // Get specId from query parameters (returns last spec parameter if available)
 const getSpecIdFromQuery = (): string | null => {

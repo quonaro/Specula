@@ -160,6 +160,7 @@ interface Props {
   spec: OpenAPISpec
   sourceUrl?: string
   serverUrl?: string
+  authorizationCredentials?: Record<string, string>
 }
 
 const props = defineProps<Props>()
@@ -491,6 +492,22 @@ const buildRequestUrl = (): string => {
   let url = serverUrl + props.path
   const queryParams: string[] = []
 
+  // Add API key query parameters from authorization
+  if (props.authorizationCredentials && props.operation.security) {
+    props.operation.security.forEach((sec) => {
+      Object.keys(sec).forEach((scheme) => {
+        const credential = props.authorizationCredentials?.[scheme]
+        if (credential) {
+          const securityScheme = props.spec.components?.securitySchemes?.[scheme]
+          if (securityScheme && 'in' in securityScheme && securityScheme.in === 'query') {
+            const name = 'name' in securityScheme ? securityScheme.name : scheme
+            queryParams.push(`${encodeURIComponent(name)}=${encodeURIComponent(credential)}`)
+          }
+        }
+      })
+    })
+  }
+
   parameters.value.forEach((param) => {
     const resolvedParam = resolver.resolve(param)
     const value = paramValues.value[resolvedParam.name]
@@ -514,6 +531,41 @@ const buildRequestUrl = (): string => {
 // Get request headers
 const getRequestHeaders = (): Record<string, string> => {
   const headers: Record<string, string> = {}
+  
+  // Add authorization headers
+  if (props.authorizationCredentials && props.operation.security) {
+    props.operation.security.forEach((sec) => {
+      Object.keys(sec).forEach((scheme) => {
+        const credential = props.authorizationCredentials?.[scheme]
+        if (credential) {
+          // Handle different authorization schemes
+          if (scheme.toLowerCase().includes('bearer')) {
+            headers['Authorization'] = `Bearer ${credential}`
+          } else if (scheme.toLowerCase().includes('basic')) {
+            headers['Authorization'] = `Basic ${credential}`
+          } else if (scheme.toLowerCase().includes('apikey')) {
+            // For API key, check if there's a name in security scheme
+            const securityScheme = props.spec.components?.securitySchemes?.[scheme]
+            if (securityScheme && 'name' in securityScheme) {
+              const name = securityScheme.name
+              const inLocation = securityScheme.in || 'header'
+              if (inLocation === 'header') {
+                headers[name] = credential
+              } else if (inLocation === 'query') {
+                // Query params are handled separately
+              }
+            } else {
+              // Default to Authorization header
+              headers['X-API-Key'] = credential
+            }
+          } else {
+            // Default: use scheme name as header name
+            headers[scheme] = credential
+          }
+        }
+      })
+    })
+  }
   
   // Add header parameters
   parameters.value.forEach((param) => {
@@ -718,6 +770,22 @@ const handleExecute = async () => {
     
     let url = serverUrl + props.path
     const queryParams: string[] = []
+
+    // Add API key query parameters from authorization
+    if (props.authorizationCredentials && props.operation.security) {
+      props.operation.security.forEach((sec) => {
+        Object.keys(sec).forEach((scheme) => {
+          const credential = props.authorizationCredentials?.[scheme]
+          if (credential) {
+            const securityScheme = props.spec.components?.securitySchemes?.[scheme]
+            if (securityScheme && 'in' in securityScheme && securityScheme.in === 'query') {
+              const name = 'name' in securityScheme ? securityScheme.name : scheme
+              queryParams.push(`${encodeURIComponent(name)}=${encodeURIComponent(credential)}`)
+            }
+          }
+        })
+      })
+    }
 
     parameters.value.forEach((param) => {
       const resolvedParam = resolver.resolve(param)

@@ -1,8 +1,7 @@
 <template>
-  <ScrollArea class="h-full">
-    <div class="p-8 space-y-6">
-      <!-- Header (Common for both columns) -->
-      <div class="space-y-3">
+  <div class="h-full flex flex-col">
+    <!-- Header (Common for both columns) -->
+    <div class="p-8 pb-4 space-y-3 flex-shrink-0">
         <div class="flex items-center gap-3">
           <Badge :class="`${getMethodColorClass(method)} text-white font-bold px-3 py-1`">
             {{ method }}
@@ -35,11 +34,13 @@
         >
           📖 {{ operation.externalDocs.description || 'External Documentation' }}
         </a>
-      </div>
+    </div>
 
-      <div class="grid grid-cols-2 gap-6">
-        <!-- Main Content (Left Column) -->
-        <div class="space-y-6">
+    <!-- Columns with separate scroll -->
+    <div class="flex-1 grid grid-cols-2 gap-6 px-8 pb-8 min-h-0">
+      <!-- Main Content (Left Column) -->
+      <ScrollArea class="h-full [&>div::-webkit-scrollbar]:hidden [&>div]:[scrollbar-width:none]">
+        <div class="space-y-6 pr-4">
           <!-- Operation-specific Servers -->
           <template v-if="operation.servers && operation.servers.length > 0">
             <Separator />
@@ -263,9 +264,11 @@
             <CallbacksView :callbacks="operation.callbacks" :resolver="resolver" />
           </template>
         </div>
+      </ScrollArea>
 
-        <!-- Try It Out (Right Column) -->
-        <div class="space-y-6 sticky top-8 self-start">
+      <!-- Try It Out (Right Column) -->
+      <ScrollArea class="h-full [&>div::-webkit-scrollbar]:hidden [&>div]:[scrollbar-width:none]">
+        <div class="space-y-6 pl-4">
           <!-- Security (Authorization) -->
           <template v-if="operation.security && operation.security.length > 0">
             <Separator />
@@ -292,6 +295,8 @@
                       </span>
                     </div>
                     <Input
+                      :model-value="localAuthorizationCredentials[scheme] || ''"
+                      @update:model-value="(val: string) => updateLocalAuthorizationCredential(scheme, val)"
                       :placeholder="`Enter ${scheme} credentials`"
                       type="password"
                       class="w-full"
@@ -305,20 +310,9 @@
 
           <!-- Server URL -->
           <Card class="p-6 space-y-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <Server class="w-5 h-5 text-primary" />
-                <h3 class="text-lg font-semibold text-foreground">Server URL</h3>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                @click="isServerUrlLocked = !isServerUrlLocked"
-                class="h-7 px-2"
-              >
-                <Lock v-if="isServerUrlLocked" class="w-4 h-4" />
-                <Unlock v-else class="w-4 h-4" />
-              </Button>
+            <div class="flex items-center gap-2">
+              <Server class="w-5 h-5 text-primary" />
+              <h3 class="text-lg font-semibold text-foreground">Server URL</h3>
             </div>
             <div class="space-y-2 border border-border rounded-md p-3 bg-muted/30">
               <div
@@ -378,10 +372,9 @@
               </div>
             </div>
             <Input
-              v-if="!isServerUrlLocked || selectedServer === 'custom' || selectedServer === 'current-host' || availableServers.length === 0"
               :model-value="getCurrentServerUrl()"
               @update:model-value="handleServerUrlUpdate"
-              :disabled="isServerUrlLocked && selectedServer !== 'custom' && selectedServer !== 'current-host' && availableServers.length > 0"
+              :disabled="selectedServer !== 'custom' && selectedServer !== 'current-host' && availableServers.length > 0"
               placeholder="https://api.example.com"
             />
           </Card>
@@ -395,8 +388,10 @@
             :spec="spec" 
             :source-url="sourceUrl"
             :server-url="getCurrentServerUrl()"
+            :authorization-credentials="getAuthorizationCredentials"
             @response="handleResponse"
           />
+          <Separator />
 
           <!-- Response -->
           <Card class="p-6 space-y-4">
@@ -473,18 +468,19 @@
             </template>
           </Card>
         </div>
-      </div>
+      </ScrollArea>
     </div>
-  </ScrollArea>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { Lock, Unlock, Copy, Check, Key, Server, FileText } from 'lucide-vue-next'
+import { computed, ref, watch, onMounted } from 'vue'
+import { Copy, Check, Key, Server, FileText } from 'lucide-vue-next'
 import type { Operation, OpenAPISpec, PathItem } from '@/types/openapi'
 import { RefResolver } from '@/utils/ref-resolver'
 import { isOperationPrivate } from '@/utils/openapi-parser'
 import { getMethodColorClass } from '@/utils/operation-cache'
+import { useAuthorizationStore } from '@/stores/authorization'
 import Badge from './ui/Badge.vue'
 import Card from './ui/Card.vue'
 import Button from './ui/Button.vue'
@@ -528,11 +524,47 @@ const isPrivate = computed(() => {
 })
 
 // Server URL management
-const isServerUrlLocked = ref(true)
 const customServerUrl = ref('')
 const response = ref<any>(null)
 const copied = ref(false)
 const responseTab = ref('body')
+
+// Authorization management
+const authorizationStore = useAuthorizationStore()
+
+// Local authorization credentials (not saved globally)
+const localAuthorizationCredentials = ref<Record<string, string>>({})
+
+
+// Initialize local credentials from global store
+const initializeLocalCredentials = () => {
+  const globalCredentials = authorizationStore.getCredentials(props.spec, props.sourceUrl)
+  localAuthorizationCredentials.value = { ...globalCredentials }
+}
+
+// Update local authorization credential
+const updateLocalAuthorizationCredential = (scheme: string, credential: string) => {
+  localAuthorizationCredentials.value = {
+    ...localAuthorizationCredentials.value,
+    [scheme]: credential,
+  }
+}
+
+// Get all authorization credentials (local, fallback to global)
+const getAuthorizationCredentials = computed(() => {
+  return localAuthorizationCredentials.value
+})
+
+// Watch for spec changes and reinitialize
+watch(() => [props.spec, props.sourceUrl], () => {
+  initializeLocalCredentials()
+}, { immediate: true })
+
+
+// Initialize on mount
+onMounted(() => {
+  initializeLocalCredentials()
+})
 
 // Extract base URL from sourceUrl if it's a URL
 const extractBaseUrl = (url: string): string | null => {
@@ -627,8 +659,7 @@ const handleServerUrlUpdate = (value: string) => {
       selectedServer.value = 'custom'
       customServerUrl.value = value
     }
-  } else if (!isServerUrlLocked.value) {
-    // When unlocked, allow editing any URL
+  } else {
     // Check if the entered URL matches any available server
     const matchingServer = availableServers.value.find(s => s.url === value)
     if (matchingServer) {
@@ -639,22 +670,6 @@ const handleServerUrlUpdate = (value: string) => {
       selectedServer.value = 'current-host'
     } else if (value.trim() !== '') {
       // If it doesn't match and is not empty, select custom
-      selectedServer.value = 'custom'
-      customServerUrl.value = value
-    } else {
-      // Empty value - keep current selection
-      selectedServer.value = value
-    }
-  } else {
-    // When locked, check if value matches any server
-    const matchingServer = availableServers.value.find(s => s.url === value)
-    if (matchingServer) {
-      selectedServer.value = matchingServer.url
-    } else if (value === getCurrentHostUrl()) {
-      // If it matches current host, select current-host
-      selectedServer.value = 'current-host'
-    } else if (value.trim() !== '') {
-      // If it doesn't match, switch to custom
       selectedServer.value = 'custom'
       customServerUrl.value = value
     }
