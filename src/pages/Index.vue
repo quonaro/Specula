@@ -34,6 +34,16 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
+            <a
+              v-if="isExampleMode"
+              href="https://github.com/quonaro/Specula"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-9 px-3 border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+            >
+              <Github class="h-4 w-4" />
+              GitHub
+            </a>
             <Button 
               v-if="hasSecuritySchemes"
               variant="outline" 
@@ -163,7 +173,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Download, ArrowLeft, Key } from 'lucide-vue-next'
+import { Download, ArrowLeft, Key, Github } from 'lucide-vue-next'
 import Sidebar from '@/components/Sidebar.vue'
 import OperationView from '@/components/OperationView.vue'
 import GroupEndpointsView from '@/components/GroupEndpointsView.vue'
@@ -196,6 +206,11 @@ const showDownloadDialog = ref(false)
 const showAuthorizationDialog = ref(false)
 const showSpecSelectionDialog = ref(false)
 const selectedSpecForAuth = ref<SpecWithSource | null>(null)
+
+// Check if Example mode is enabled
+const isExampleMode = computed(() => {
+  return import.meta.env.VITE_EXAMPLE === 'true'
+})
 
 // Check if any spec has security schemes
 const hasSecuritySchemes = computed(() => {
