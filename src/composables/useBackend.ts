@@ -25,9 +25,21 @@ function getBackendUrl(): string {
 }
 
 /**
+ * Check if backend checking is disabled
+ */
+function isBackendDisabled(): boolean {
+  return import.meta.env.VITE_WITHOUT_BACKEND === 'true'
+}
+
+/**
  * Check if backend is available by pinging health endpoint
  */
 async function checkBackendHealth(url: string, timeout: number = 3000): Promise<boolean> {
+  // If backend is disabled, always return false
+  if (isBackendDisabled()) {
+    return false
+  }
+
   try {
     const healthUrl = `${url.replace(/\/$/, '')}/health`
     const controller = new AbortController()
@@ -61,6 +73,12 @@ export function useBackend() {
    * Check backend availability
    */
   const checkBackend = async (customUrl?: string): Promise<boolean> => {
+    // If backend is disabled, always return false without checking
+    if (isBackendDisabled()) {
+      backendStore.setAvailable(false, null)
+      return false
+    }
+
     if (backendStore.isChecking) {
       // Already checking, return current status
       return backendStore.isAvailable

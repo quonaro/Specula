@@ -31,6 +31,8 @@ jobs:
       - name: Build project
         env:
           VITE_BASE_PATH: /Specula/
+          VITE_WITHOUT_BACKEND: 'true'
+          VITE_EXAMPLE: 'true'
         run: npm run build
 
       - name: Deploy to example branch

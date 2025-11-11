@@ -89,8 +89,21 @@
           </div>
         </div>
 
+        <!-- Example Section -->
+        <div v-if="showExample">
+          <button
+            @click="handleLoadExample"
+            class="w-full flex items-center justify-between py-3 text-sm font-medium hover:text-foreground transition-colors text-muted-foreground group"
+          >
+            <div class="flex items-center gap-2">
+              <Sparkles class="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+              <span>Load Example</span>
+            </div>
+          </button>
+        </div>
+
         <!-- URL Section -->
-        <div>
+        <div v-if="!withoutBackend">
           <button
             @click="toggleSection('url')"
             class="w-full flex items-center justify-between py-3 text-sm font-medium hover:text-foreground transition-colors text-muted-foreground group"
@@ -660,6 +673,10 @@ const regularCacheSpecs = computed(() => {
 })
 
 
+// Environment variables
+const withoutBackend = computed(() => import.meta.env.VITE_WITHOUT_BACKEND === 'true')
+const showExample = computed(() => import.meta.env.VITE_EXAMPLE === 'true')
+
 // Computed properties
 const selectedCount = computed(() => {
   return selectedHistory.value.length + selectedCache.value.length + selectedFavorites.value.length + selectedUrls.value.length + loadedFiles.value.length
@@ -1091,6 +1108,33 @@ const handleLoadFromClipboard = async () => {
     toast({
       title: 'Invalid JSON',
       description: 'Could not parse JSON from clipboard. Please check the format.',
+      variant: 'destructive',
+    })
+  }
+}
+
+const handleLoadExample = async () => {
+  try {
+    // Use BASE_URL to handle GitHub Pages subdirectory
+    const baseUrl = import.meta.env.BASE_URL || '/'
+    const examplePath = `${baseUrl}example-openapi.json`
+    const response = await fetch(examplePath)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const spec = await response.json()
+    const validated = validateAndLoad(spec, true)
+    if (validated) {
+      emit('specsLoad', [validated])
+      toast({
+        title: 'Example loaded',
+        description: 'Example OpenAPI specification has been loaded',
+      })
+    }
+  } catch (error: any) {
+    toast({
+      title: 'Failed to load example',
+      description: `Could not load example specification: ${error.message || 'Unknown error'}`,
       variant: 'destructive',
     })
   }
