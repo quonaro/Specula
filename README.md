@@ -4,7 +4,7 @@ Specula is a modern web interface for viewing and testing OpenAPI specifications
 
 ## Preview
 
-[📹 Watch Preview Video](docs/videos/preview.mp4)
+![Preview](docs/videos/preview.gif)
 
 ## Features
 
