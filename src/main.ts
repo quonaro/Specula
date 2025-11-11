@@ -15,6 +15,20 @@ const pinia = createPinia()
 // Get base path from environment variable, default to '/' for development
 const base = import.meta.env.BASE_URL || '/';
 
+// Handle GitHub Pages 404 redirect
+// https://github.com/rafgraph/spa-github-pages
+(function(l) {
+  if (l.search[1] === '/' ) {
+    var decoded = l.search.slice(1).split('&').map(function(s) { 
+      return s.replace(/~and~/g, '&')
+    }).join('?');
+    // Use base path to correctly restore the route
+    var basePath = base.endsWith('/') ? base.slice(0, -1) : base;
+    var newPath = basePath + '/' + decoded;
+    window.history.replaceState(null, '', newPath + l.hash);
+  }
+}(window.location))
+
 const router = createRouter({
   history: createWebHistory(base),
   routes: [
