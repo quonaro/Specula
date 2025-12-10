@@ -85,6 +85,15 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
+            <Button
+              v-if="isExampleMode"
+              variant="outline"
+              size="sm"
+              @click="handleLoadExample"
+            >
+              <FileJson class="h-4 w-4 mr-2" />
+              Load Example
+            </Button>
             <a
               v-if="isExampleMode"
               href="https://github.com/quonaro/Specula"
@@ -233,7 +242,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Download, ArrowLeft, Key, Github, Search, Settings } from 'lucide-vue-next'
+import { Download, ArrowLeft, Key, Github, Search, Settings, FileJson } from 'lucide-vue-next'
 import Sidebar from '@/components/Sidebar.vue'
 import DownloadDialog from '@/components/DownloadDialog.vue'
 import AuthorizationSettingsDialog from '@/components/AuthorizationSettingsDialog.vue'
@@ -328,6 +337,38 @@ const selectSpecForAuthorization = (specWithSource: SpecWithSource) => {
   selectedSpecForAuth.value = specWithSource
   showSpecSelectionDialog.value = false
   showAuthorizationDialog.value = true
+}
+
+// Handle loading example specification
+const handleLoadExample = async () => {
+  try {
+    // Use BASE_URL to handle GitHub Pages subdirectory
+    const baseUrl = import.meta.env.BASE_URL || '/'
+    const examplePath = `${baseUrl}example-openapi.json`
+    const response = await fetch(examplePath)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const spec: OpenAPISpec = await response.json()
+    const title = spec.info?.title || 'Example API'
+    
+    specStore.setSpecs([{
+      spec,
+      sourceUrl: examplePath,
+      title,
+    }])
+    
+    toast({
+      title: 'Example loaded',
+      description: 'Example OpenAPI specification has been loaded',
+    })
+  } catch (error: any) {
+    toast({
+      title: 'Failed to load example',
+      description: `Could not load example specification: ${error.message || 'Unknown error'}`,
+      variant: 'destructive',
+    })
+  }
 }
 
 // Watch for dialog close and clear selection
