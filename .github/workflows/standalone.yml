@@ -177,18 +177,41 @@ jobs:
         run: |
           # Setup SSH
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
+          # Write SSH key with proper formatting
           echo "$CDN_SSH_KEY" > ~/.ssh/cdn_key
           chmod 600 ~/.ssh/cdn_key
+          
+          # Verify key file exists and has content
+          if [ ! -s ~/.ssh/cdn_key ]; then
+            echo "Error: SSH key file is empty or missing"
+            exit 1
+          fi
+          
+          # Add server to known_hosts
           ssh-keyscan -p $CDN_PORT $CDN_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
+          chmod 600 ~/.ssh/known_hosts
+          
+          # Test SSH connection with verbose output
+          echo "Testing SSH connection..."
+          ssh -v -i ~/.ssh/cdn_key -p $CDN_PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts \
+            $CDN_USER@$CDN_HOST "echo 'SSH connection successful'" || {
+            echo "SSH connection failed. Checking key format..."
+            head -1 ~/.ssh/cdn_key
+            exit 1
+          }
           
           # Create directory on CDN server if it doesn't exist
-          ssh -i ~/.ssh/cdn_key -p $CDN_PORT -o StrictHostKeyChecking=no $CDN_USER@$CDN_HOST \
-            "mkdir -p /home/cdn/files/Specula"
+          ssh -i ~/.ssh/cdn_key -p $CDN_PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts \
+            $CDN_USER@$CDN_HOST "mkdir -p /home/cdn/files/Specula"
           
           # Copy files to CDN
-          scp -i ~/.ssh/cdn_key -P $CDN_PORT -o StrictHostKeyChecking=no \
+          scp -i ~/.ssh/cdn_key -P $CDN_PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts \
             dist/specula.js dist/specula.css \
             $CDN_USER@$CDN_HOST:/home/cdn/files/Specula/
+          
+          echo "Files deployed successfully to CDN"
           
           # Cleanup
           rm -f ~/.ssh/cdn_key
