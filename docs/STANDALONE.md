@@ -34,7 +34,7 @@ The easiest way to use Specula is to load it from jsDelivr CDN, which supports C
         // Initialize Specula
         Specula.init({
             container: '#specula-container',
-            openapi: 'https://api.example.com/openapi.json'
+            openapi: 'https://petstore3.swagger.io/api/v3/openapi.json'
         }).then(function(specula) {
             console.log('Specula initialized!');
         }).catch(function(error) {

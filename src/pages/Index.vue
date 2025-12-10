@@ -2,7 +2,7 @@
   <div v-if="specStore.specs.length === 0 || !tagTree" class="h-screen flex items-center justify-center">
     <div class="text-center space-y-4">
       <p class="text-lg text-muted-foreground">No specification loaded</p>
-      <Button @click="router.push('/selection')">
+      <Button v-if="!isStandaloneMode()" @click="router.push('/selection')">
         Go to Selection
       </Button>
     </div>
@@ -105,6 +105,7 @@
               Authorization
             </Button>
             <Button 
+              v-if="!isStandaloneMode()"
               variant="outline" 
               size="sm" 
               @click="handleBackToSelection"
@@ -262,6 +263,11 @@ const specStore = useSpecStore()
 const specCacheStore = useSpecCacheStore()
 const specHistoryStore = useSpecHistoryStore()
 const lastWorkspaceStore = useLastWorkspaceStore()
+
+// Check if running in standalone mode
+const isStandaloneMode = () => {
+  return typeof window !== 'undefined' && (window as any).__SPECULA_STANDALONE__ === true
+}
 const tagTree = ref<TagNode | null>(null)
 const selectedOperation = ref<{ method: string; path: string } | null>(null)
 const selectedGroup = ref<TagNode | null>(null)
@@ -696,7 +702,8 @@ const loadSpecsFromUrl = async () => {
   const specParams = route.query.spec
   if (!specParams) {
     // If no spec parameter, check if we have specs in store
-    if (specStore.specs.length === 0 && route.path !== '/selection') {
+    // Don't redirect to selection in standalone mode
+    if (specStore.specs.length === 0 && route.path !== '/selection' && !isStandaloneMode()) {
       router.push('/selection')
     }
     return
@@ -824,8 +831,8 @@ watch(() => specStore.specs, (newSpecs, oldSpecs) => {
     restoreStateFromRoute()
   } else {
     tagTree.value = null
-    // Redirect to selection if no spec
-    if (route.path !== '/selection') {
+    // Redirect to selection if no spec (but not in standalone mode)
+    if (route.path !== '/selection' && !isStandaloneMode()) {
       router.push('/selection')
     }
   }
@@ -916,7 +923,10 @@ const handleGroupSelect = (node: TagNode) => {
 const handleBackToSelection = () => {
   selectedOperation.value = null
   selectedGroup.value = null
-  router.push('/selection')
+  // Don't navigate to selection in standalone mode
+  if (!isStandaloneMode()) {
+    router.push('/selection')
+  }
 }
 
 // Compute page title based on selected operation/group/spec

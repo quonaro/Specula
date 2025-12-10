@@ -88,9 +88,10 @@ export async function init(config: SpeculaConfig): Promise<SpeculaInstance> {
     rtl: false
   })
 
-  app.mount(`#${containerId}`)
+  // Mark as standalone mode to disable selection page redirects
+  ;(window as any).__SPECULA_STANDALONE__ = true
 
-  // Load spec after app is mounted
+  // Load spec BEFORE mounting if provided
   const specStore = useSpecStore()
   
   const loadSpec = async (url: string | string[]) => {
@@ -122,7 +123,7 @@ export async function init(config: SpeculaConfig): Promise<SpeculaInstance> {
     }
   }
 
-  // Load initial spec if provided
+  // Load initial spec if provided (before mounting to avoid selection page)
   if (config.openapi) {
     try {
       await loadSpec(config.openapi)
@@ -130,6 +131,9 @@ export async function init(config: SpeculaConfig): Promise<SpeculaInstance> {
       console.error('Failed to load initial OpenAPI spec:', error)
     }
   }
+
+  // Mount app after spec is loaded (if provided)
+  app.mount(`#${containerId}`)
 
   const destroy = () => {
     app.unmount()

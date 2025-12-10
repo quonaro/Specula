@@ -5,6 +5,10 @@ import path from "path";
 export default defineConfig({
     base: './',
     plugins: [vue()],
+    define: {
+        // Disable backend checking in standalone version
+        'import.meta.env.VITE_WITHOUT_BACKEND': '"true"',
+    },
     resolve: {
         alias: {
             "@": path.resolve(__dirname, "./src"),
