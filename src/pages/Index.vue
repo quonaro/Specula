@@ -976,8 +976,36 @@ watch(() => specStore.specs, (newSpecs, oldSpecs) => {
     }
     
     // Update URL with spec parameters if not loading from URL
+    // In standalone mode, only add spec parameter if needed for initial load or multiple specs
     if (!isLoadingFromUrl) {
-      updateUrlWithSpecs(newSpecs)
+      // In standalone mode, preserve existing spec query if specs match what's already loaded
+      // This avoids unnecessary query parameters when navigating between endpoints
+      if (isStandaloneMode() && route.query.spec) {
+        // Check if current specs match what's in query - if so, keep it
+        // Otherwise update (e.g., when new spec is loaded)
+        const currentSpecParams = route.query.spec
+        const specValues = Array.isArray(currentSpecParams) 
+          ? currentSpecParams 
+          : [currentSpecParams]
+        
+        // Only update if specs changed (different count or sources)
+        const specsChanged = newSpecs.length !== specValues.length ||
+          newSpecs.some((spec, idx) => {
+            const cachedSpecs = Array.from(specCacheStore.cache.values())
+            if (spec.sourceUrl) {
+              return spec.sourceUrl !== specValues[idx]
+            } else {
+              const cached = cachedSpecs.find(c => c.spec === spec.spec)
+              return cached?.hash !== specValues[idx]
+            }
+          })
+        
+        if (specsChanged) {
+          updateUrlWithSpecs(newSpecs)
+        }
+      } else {
+        updateUrlWithSpecs(newSpecs)
+      }
     }
     
     // Restore state from URL after tree is built
@@ -1099,11 +1127,25 @@ const handleOperationSelect = (method: string, path: string) => {
       }
     }
     
-    // Add spec to query if multiple specs exist and we found a specific one
-    if (foundSpecWithSource && specStore.specs.length > 1) {
+    // In standalone mode, only add spec to query if:
+    // 1. Multiple specs exist (to identify which one)
+    // 2. Spec was loaded from URL parameter (preserve it)
+    // Don't add spec parameter for normal navigation to avoid backend 404 issues
+    const hasSpecInQuery = route.query.spec
+    if (foundSpecWithSource && specStore.specs.length > 1 && hasSpecInQuery) {
+      // Preserve existing spec query if multiple specs
+      // This helps when user navigates between endpoints with same path in different specs
+    } else if (foundSpecWithSource && specStore.specs.length > 1) {
+      // Only add spec parameter if multiple specs and not already in query
       const specId = findSpecHash(foundSpecWithSource.spec)
       if (specId) {
         query.spec = specId
+      }
+    } else if (hasSpecInQuery) {
+      // Preserve spec parameter if it exists (for initial load or multiple specs)
+      // But remove it if single spec and navigating normally
+      if (specStore.specs.length === 1) {
+        delete query.spec
       }
     }
     
