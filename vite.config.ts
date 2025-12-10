@@ -13,6 +13,12 @@ export default defineConfig(({ mode }) => {
       port: 8080,
     },
     plugins: [vue()],
+    // Explicitly define environment variables to ensure they are embedded in the build
+    define: {
+      'import.meta.env.VITE_EXAMPLE': JSON.stringify(process.env.VITE_EXAMPLE || 'false'),
+      'import.meta.env.VITE_WITHOUT_BACKEND': JSON.stringify(process.env.VITE_WITHOUT_BACKEND || 'false'),
+      'import.meta.env.VITE_BASE_PATH': JSON.stringify(base),
+    },
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
