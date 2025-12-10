@@ -19,6 +19,7 @@ import NotFound from './pages/NotFound.vue'
 export interface SpeculaConfig {
   container: string | HTMLElement
   openapi: string | string[]
+  base?: string // Base path for routing (e.g., '/docs' for FastAPI integration)
 }
 
 export interface SpeculaInstance {
@@ -38,6 +39,21 @@ export async function init(config: SpeculaConfig): Promise<SpeculaInstance> {
   // This ensures they are available when components mount
   ;(window as any).__SPECULA_STANDALONE__ = true
   ;(window as any).__SPECULA_LOGO_URL__ = logoUrl
+  
+  // Normalize base path: ensure it starts with / and ends without /
+  let basePath = '/'
+  if (config.base) {
+    basePath = config.base.trim()
+    if (!basePath.startsWith('/')) {
+      basePath = '/' + basePath
+    }
+    if (basePath.endsWith('/') && basePath.length > 1) {
+      basePath = basePath.slice(0, -1)
+    }
+  }
+  
+  // Store base path globally for use in components
+  ;(window as any).__SPECULA_BASE_PATH__ = basePath
 
   // Set favicon from Base64 logo
   if (typeof document !== 'undefined') {
@@ -69,9 +85,10 @@ export async function init(config: SpeculaConfig): Promise<SpeculaInstance> {
 
   // Use web history for clean URLs in standalone mode
   // Simplified routing format: /:method/:path (e.g., /PUT/pet)
+  // Base path can be configured (e.g., '/docs' for FastAPI integration)
   // No /selection route in standalone mode - always show Index
   const router = createRouter({
-    history: createWebHistory(),
+    history: createWebHistory(basePath),
     routes: [
       { path: '/', component: Index },
       { path: '/:method/:path(.*)', component: Index },
