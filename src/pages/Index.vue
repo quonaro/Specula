@@ -700,15 +700,7 @@ const restoreStateFromRoute = () => {
       }
     }
   } else if (path === '/') {
-    // In standalone mode, auto-open first endpoint if available
-    if (isStandaloneMode() && !selectedOperation.value) {
-      const firstOp = findFirstOperation(tagTree.value)
-      if (firstOp) {
-        handleOperationSelect(firstOp.method, firstOp.path)
-        return
-      }
-    }
-    
+    // Root path - show empty state (no operation selected)
     selectedOperation.value = null
     selectedGroup.value = null
   } else {
@@ -990,17 +982,6 @@ watch(() => specStore.specs, (newSpecs, oldSpecs) => {
     
     // Restore state from URL after tree is built
     restoreStateFromRoute()
-    
-    // In standalone mode, if on root path and no operation selected, auto-open first endpoint
-    if (isStandaloneMode() && route.path === '/' && !selectedOperation.value && tagTree.value) {
-      // Use nextTick to ensure DOM is ready
-      setTimeout(() => {
-        const firstOp = findFirstOperation(tagTree.value!)
-        if (firstOp && !selectedOperation.value) {
-          handleOperationSelect(firstOp.method, firstOp.path)
-        }
-      }, 100)
-    }
   } else {
     tagTree.value = null
     // Redirect to selection if no spec (but not in standalone mode)
