@@ -3,7 +3,8 @@ import { resolve } from 'path';
 import type { Plugin } from 'vite';
 
 /**
- * Vite plugin to replace logo.png import with Base64 string in standalone build
+ * Vite plugin to replace logo.png import with Base64 string in standalone build.
+ * The Base64 logo is used both for the application logo and favicon.
  */
 export function logoBase64Plugin(): Plugin {
   let logoBase64: string | null = null;

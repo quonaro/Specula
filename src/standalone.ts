@@ -1,6 +1,6 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import Toast from 'vue-toastification'
 import 'vue-toastification/dist/index.css'
 import './index.css'
@@ -39,6 +39,18 @@ export async function init(config: SpeculaConfig): Promise<SpeculaInstance> {
   ;(window as any).__SPECULA_STANDALONE__ = true
   ;(window as any).__SPECULA_LOGO_URL__ = logoUrl
 
+  // Set favicon from Base64 logo
+  if (typeof document !== 'undefined') {
+    let favicon = document.querySelector('link[rel="icon"]') as HTMLLinkElement
+    if (!favicon) {
+      favicon = document.createElement('link')
+      favicon.rel = 'icon'
+      favicon.type = 'image/png'
+      document.head.appendChild(favicon)
+    }
+    favicon.href = logoUrl
+  }
+
   const containerId = `specula-${instanceCount++}`
   const container = typeof config.container === 'string' 
     ? document.querySelector(config.container) as HTMLElement
@@ -55,15 +67,14 @@ export async function init(config: SpeculaConfig): Promise<SpeculaInstance> {
 
   const pinia = createPinia()
 
-  // Use hash history for standalone to avoid server configuration issues
+  // Use web history for clean URLs in standalone mode
+  // Simplified routing format: /:method/:path (e.g., /PUT/pet)
   // No /selection route in standalone mode - always show Index
   const router = createRouter({
-    history: createWebHashHistory(),
+    history: createWebHistory(),
     routes: [
       { path: '/', component: Index },
-      { path: '/group/:groupPath', component: Index },
-      { path: '/spec/:specId/endpoint/:method/:path(.*)', component: Index },
-      { path: '/endpoint/:method/:path(.*)', component: Index },
+      { path: '/:method/:path(.*)', component: Index },
       { path: '/:pathMatch(.*)*', component: Index }
     ]
   })

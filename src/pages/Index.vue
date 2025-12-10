@@ -435,6 +435,131 @@ const restoreStateFromRoute = () => {
   
   const path = route.path
   
+  // Handle standalone mode with simplified routing format: /:method/:path
+  if (isStandaloneMode() && path !== '/' && !path.startsWith('/group/')) {
+    const pathSegments = path.split('/').filter(s => s.length > 0)
+    
+    // Check if path matches format /:method/:path
+    if (pathSegments.length >= 2) {
+      const method = pathSegments[0]?.toUpperCase()
+      const endpointPathFromUrl = '/' + pathSegments.slice(1).join('/')
+      
+      // Valid HTTP methods
+      const validMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD', 'TRACE']
+      
+      if (method && validMethods.includes(method)) {
+        let foundPath: string | null = null
+        let foundSpec: OpenAPISpec | null = null
+        let foundSpecWithSource: SpecWithSource | null = null
+        
+        // Get specId from query if specified
+        const specIdFromQuery = getSpecIdFromQuery()
+        let targetSpec: OpenAPISpec | null = null
+        
+        if (specIdFromQuery) {
+          // Try to find spec by hash from cache
+          if (isHash(specIdFromQuery)) {
+            targetSpec = specCacheStore.getByHash(specIdFromQuery)
+          }
+          
+          // If found, search only in that spec
+          if (targetSpec) {
+            for (const specWithSource of specStore.specs) {
+              if (specWithSource.spec === targetSpec) {
+                if (specWithSource.spec.paths[endpointPathFromUrl]) {
+                  const pathItem = specWithSource.spec.paths[endpointPathFromUrl]
+                  const operation = pathItem[method.toLowerCase() as keyof typeof pathItem]
+                  if (operation) {
+                    foundPath = endpointPathFromUrl
+                    foundSpec = specWithSource.spec
+                    foundSpecWithSource = specWithSource
+                    break
+                  }
+                }
+                break
+              }
+            }
+          }
+        }
+        
+        // If not found with specId, or specId not specified, search in all specs
+        if (!foundPath) {
+          for (const specWithSource of specStore.specs) {
+            // Skip if we already tried this spec
+            if (targetSpec && specWithSource.spec === targetSpec) continue
+            
+            if (specWithSource.spec.paths[endpointPathFromUrl]) {
+              const pathItem = specWithSource.spec.paths[endpointPathFromUrl]
+              const operation = pathItem[method.toLowerCase() as keyof typeof pathItem]
+              if (operation) {
+                foundPath = endpointPathFromUrl
+                foundSpec = specWithSource.spec
+                foundSpecWithSource = specWithSource
+                break
+              }
+            }
+          }
+        }
+        
+        // If not found by exact path, try to match by path segments (handling path parameters)
+        if (!foundPath) {
+          for (const specWithSource of specStore.specs) {
+            // Skip if we already tried this spec
+            if (targetSpec && specWithSource.spec === targetSpec) continue
+            
+            for (const [endpointPath, pathItem] of Object.entries(specWithSource.spec.paths)) {
+              const endpointSegments = endpointPath.split('/').filter(s => s.length > 0)
+              const urlSegments = pathSegments.slice(1) // Exclude method
+              
+              // Try to match path segments
+              if (endpointSegments.length === urlSegments.length) {
+                let matches = true
+                for (let i = 0; i < endpointSegments.length; i++) {
+                  const endpointSeg = endpointSegments[i]
+                  const urlSeg = urlSegments[i]
+                  // Allow match if endpoint segment is a parameter {param} or :param, or if segments match exactly
+                  if (!endpointSeg.match(/^[{:]/) && endpointSeg !== urlSeg) {
+                    matches = false
+                    break
+                  }
+                }
+                
+                if (matches) {
+                  const operation = pathItem[method.toLowerCase() as keyof typeof pathItem]
+                  if (operation) {
+                    foundPath = endpointPath
+                    foundSpec = specWithSource.spec
+                    foundSpecWithSource = specWithSource
+                    break
+                  }
+                }
+              }
+            }
+            if (foundPath) break
+          }
+        }
+        
+        if (foundPath && foundSpec) {
+          selectedOperation.value = { method, path: foundPath }
+          selectedGroup.value = null
+        } else {
+          // Endpoint not found, redirect to home
+          router.replace('/')
+        }
+        
+        return
+      } else {
+        // Invalid HTTP method, redirect to home
+        router.replace('/')
+        return
+      }
+    } else if (pathSegments.length > 0) {
+      // Path doesn't match expected format, redirect to home
+      router.replace('/')
+      return
+    }
+  }
+  
   if (path.startsWith('/group/')) {
     const groupSlug = route.params.groupPath as string
     const node = findNodeBySlug(tagTree.value, groupSlug)
@@ -902,13 +1027,30 @@ const handleGlobalSearchSelect = (result: SearchResult) => {
   const spec = specStore.specs[result.specIndex]
   if (!spec) return
   
-  // Navigate to the endpoint
-  const slug = endpointPathToSlug(result.path)
-  router.push({
-    path: specStore.specs.length === 1
-      ? `/endpoint/${result.method.toLowerCase()}/${slug}`
-      : `/spec/${result.specIndex}/endpoint/${result.method.toLowerCase()}/${slug}`
-  })
+  // In standalone mode, use simplified format: /:method/:path
+  if (isStandaloneMode()) {
+    const endpointPath = result.path.startsWith('/') ? result.path.slice(1) : result.path
+    const newPath = `/${result.method.toUpperCase()}/${endpointPath}`
+    
+    // Add spec to query if multiple specs exist
+    const query: Record<string, string | string[]> = {}
+    if (specStore.specs.length > 1) {
+      const specId = findSpecHash(spec.spec)
+      if (specId) {
+        query.spec = specId
+      }
+    }
+    
+    router.push({ path: newPath, query })
+  } else {
+    // Non-standalone mode: use original format with slug
+    const slug = endpointPathToSlug(result.path)
+    router.push({
+      path: specStore.specs.length === 1
+        ? `/endpoint/${result.method.toLowerCase()}/${slug}`
+        : `/spec/${result.specIndex}/endpoint/${result.method.toLowerCase()}/${slug}`
+    })
+  }
   
   // Close search results
   showGlobalSearchResults.value = false
@@ -927,11 +1069,72 @@ const handleClickOutsideSearch = (event: MouseEvent) => {
 }
 
 const handleOperationSelect = (method: string, path: string) => {
-  // Update URL with slug - state will be restored from route
-  const slug = endpointPathToSlug(path)
   const methodLower = method.toLowerCase()
   // Preserve spec query parameters when navigating
   const query: Record<string, string | string[]> = { ...route.query }
+  
+  // In standalone mode, use simplified format: /:method/:path
+  if (isStandaloneMode()) {
+    // Find the spec that contains this operation
+    let foundSpecWithSource: SpecWithSource | null = null
+    for (const specWithSource of specStore.specs) {
+      const pathItem = specWithSource.spec.paths[path]
+      if (pathItem) {
+        const operation = pathItem[method.toLowerCase() as keyof typeof pathItem]
+        if (operation) {
+          foundSpecWithSource = specWithSource
+          break
+        }
+      }
+    }
+    
+    // If multiple specs have the same endpoint, use spec from query if available
+    if (!foundSpecWithSource && specStore.specs.length > 0) {
+      const specIdFromQuery = getSpecIdFromQuery()
+      if (specIdFromQuery && isHash(specIdFromQuery)) {
+        const targetSpec = specCacheStore.getByHash(specIdFromQuery)
+        if (targetSpec) {
+          for (const specWithSource of specStore.specs) {
+            if (specWithSource.spec === targetSpec) {
+              foundSpecWithSource = specWithSource
+              break
+            }
+          }
+        }
+      }
+    }
+    
+    // If still not found, use first spec that has this endpoint
+    if (!foundSpecWithSource) {
+      for (const specWithSource of specStore.specs) {
+        const pathItem = specWithSource.spec.paths[path]
+        if (pathItem) {
+          const operation = pathItem[method.toLowerCase() as keyof typeof pathItem]
+          if (operation) {
+            foundSpecWithSource = specWithSource
+            break
+          }
+        }
+      }
+    }
+    
+    // Add spec to query if multiple specs exist and we found a specific one
+    if (foundSpecWithSource && specStore.specs.length > 1) {
+      const specId = findSpecHash(foundSpecWithSource.spec)
+      if (specId) {
+        query.spec = specId
+      }
+    }
+    
+    // Build path: /:method/:path (remove leading slash from path if present)
+    const endpointPath = path.startsWith('/') ? path.slice(1) : path
+    const newPath = `/${method.toUpperCase()}/${endpointPath}`
+    router.push({ path: newPath, query })
+    return
+  }
+  
+  // Non-standalone mode: use original format with slug
+  const slug = endpointPathToSlug(path)
   
   // Find the spec that contains this operation to get the correct specId
   let specId: string | null = null
