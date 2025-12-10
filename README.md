@@ -16,6 +16,7 @@ Specula is a modern web interface for viewing and testing OpenAPI specifications
 - 💾 **Caching** - automatic saving of loaded specifications
 - ⭐ **Favorites** - ability to save frequently used specifications
 - 📱 **Responsive Design** - works on all devices
+- 🔌 **Standalone Integration** - easily embed Specula in any HTML page with a simple script tag
 
 ## Live Demo
 
@@ -76,6 +77,16 @@ npm run build
 ```
 
 Built files will be in the `dist/` folder
+
+### Build Standalone Bundle
+
+Build a standalone bundle that can be embedded in any HTML page:
+
+```bash
+npm run build:standalone
+```
+
+This creates `dist/specula.js` and `dist/specula.css` files that can be included in any HTML page. See [Standalone Integration Guide](docs/STANDALONE.md) for usage instructions.
 
 ### Preview Production Build
 
