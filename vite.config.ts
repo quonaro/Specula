@@ -11,6 +11,15 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "::",
       port: 8080,
+      // Ensure SPA routing works correctly - fallback to index.html for all routes
+      fs: {
+        // Allow serving files from one level up to the project root
+        allow: ['..']
+      }
+    },
+    preview: {
+      port: 8080,
+      host: "::",
     },
     plugins: [vue()],
     // Explicitly define environment variables to ensure they are embedded in the build

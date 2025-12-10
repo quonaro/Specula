@@ -79,6 +79,9 @@ export async function init(config: SpeculaConfig): Promise<SpeculaInstance> {
   // Create app container
   const appContainer = document.createElement('div')
   appContainer.id = containerId
+  // Set styles to ensure full width and height in standalone mode
+  appContainer.style.width = '100%'
+  appContainer.style.height = '100%'
   container.appendChild(appContainer)
 
   const pinia = createPinia()
