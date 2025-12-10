@@ -406,6 +406,29 @@ const findSpecHash = (targetSpec: OpenAPISpec): string | null => {
   return cachedByContent ? cachedByContent.hash : null
 }
 
+// Find first operation in tag tree (for auto-opening in standalone mode)
+const findFirstOperation = (node: TagNode): { method: string; path: string } | null => {
+  // Check if current node has operations
+  if (node.operations.length > 0) {
+    const firstOp = node.operations[0]
+    return { method: firstOp.method, path: firstOp.path }
+  }
+  
+  // Recursively check children (sorted for consistent ordering)
+  const sortedChildren = Array.from(node.children.values()).sort((a, b) => 
+    a.name.localeCompare(b.name)
+  )
+  
+  for (const child of sortedChildren) {
+    const found = findFirstOperation(child)
+    if (found) {
+      return found
+    }
+  }
+  
+  return null
+}
+
 // Restore state from route
 const restoreStateFromRoute = () => {
   if (!tagTree.value) return
@@ -552,6 +575,15 @@ const restoreStateFromRoute = () => {
       }
     }
   } else if (path === '/') {
+    // In standalone mode, auto-open first endpoint if available
+    if (isStandaloneMode() && !selectedOperation.value) {
+      const firstOp = findFirstOperation(tagTree.value)
+      if (firstOp) {
+        handleOperationSelect(firstOp.method, firstOp.path)
+        return
+      }
+    }
+    
     selectedOperation.value = null
     selectedGroup.value = null
   } else {
@@ -833,6 +865,17 @@ watch(() => specStore.specs, (newSpecs, oldSpecs) => {
     
     // Restore state from URL after tree is built
     restoreStateFromRoute()
+    
+    // In standalone mode, if on root path and no operation selected, auto-open first endpoint
+    if (isStandaloneMode() && route.path === '/' && !selectedOperation.value && tagTree.value) {
+      // Use nextTick to ensure DOM is ready
+      setTimeout(() => {
+        const firstOp = findFirstOperation(tagTree.value!)
+        if (firstOp && !selectedOperation.value) {
+          handleOperationSelect(firstOp.method, firstOp.path)
+        }
+      }, 100)
+    }
   } else {
     tagTree.value = null
     // Redirect to selection if no spec (but not in standalone mode)

@@ -28,7 +28,15 @@ function getBackendUrl(): string {
  * Check if backend checking is disabled
  */
 function isBackendDisabled(): boolean {
-  return import.meta.env.VITE_WITHOUT_BACKEND === 'true'
+  // Check environment variable
+  if (import.meta.env.VITE_WITHOUT_BACKEND === 'true') {
+    return true
+  }
+  // Check standalone mode flag
+  if (typeof window !== 'undefined' && (window as any).__SPECULA_STANDALONE__ === true) {
+    return true
+  }
+  return false
 }
 
 /**

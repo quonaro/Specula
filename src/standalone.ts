@@ -34,6 +34,11 @@ let instanceCount = 0
  * @returns Specula instance with methods to control it
  */
 export async function init(config: SpeculaConfig): Promise<SpeculaInstance> {
+  // Mark as standalone mode and set logo URL BEFORE creating app
+  // This ensures they are available when components mount
+  ;(window as any).__SPECULA_STANDALONE__ = true
+  ;(window as any).__SPECULA_LOGO_URL__ = logoUrl
+
   const containerId = `specula-${instanceCount++}`
   const container = typeof config.container === 'string' 
     ? document.querySelector(config.container) as HTMLElement
@@ -88,11 +93,6 @@ export async function init(config: SpeculaConfig): Promise<SpeculaInstance> {
     icon: true,
     rtl: false
   })
-
-  // Mark as standalone mode to disable selection page redirects
-  ;(window as any).__SPECULA_STANDALONE__ = true
-  // Make logo URL available globally for components
-  ;(window as any).__SPECULA_LOGO_URL__ = logoUrl
 
   // Load spec BEFORE mounting if provided
   const specStore = useSpecStore()
