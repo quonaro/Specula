@@ -1,6 +1,7 @@
 <template>
   <div :style="{ marginLeft: depth > 0 ? `${depth * 16}px` : 0 }" class="space-y-2">
-    <p v-if="schema.description" class="text-sm text-muted-foreground">
+    <!-- Don't show description at depth 0 to avoid duplication when called from OperationView -->
+    <p v-if="schema.description && depth > 0" class="text-sm text-muted-foreground">
       {{ schema.description }}
     </p>
 
