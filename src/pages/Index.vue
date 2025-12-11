@@ -7,22 +7,18 @@
       </Button>
     </div>
   </div>
-  
+
   <div v-else class="flex h-screen w-full bg-background" @click="handleClickOutsideSearch">
-    <Sidebar
-      :root="tagTree"
-      :selected-operation="selectedOperation"
-      @operation-select="handleOperationSelect"
-      @group-select="handleGroupSelect"
-    />
-    
+    <Sidebar :root="tagTree" :selected-operation="selectedOperation" @operation-select="handleOperationSelect"
+      @group-select="handleGroupSelect" />
+
     <div class="flex-1 flex flex-col h-screen">
       <header class="border-b border-border bg-card">
         <div class="h-14 flex items-center justify-between px-6">
           <div class="flex items-center gap-3">
             <div>
               <h1 class="text-lg font-semibold text-foreground">
-                {{ specStore.specs.length === 1 
+                {{ specStore.specs.length === 1
                   ? (specStore.specs[0].spec?.info?.title || 'OpenAPI Specification')
                   : `${specStore.specs.length} Specifications` }}
               </h1>
@@ -36,31 +32,20 @@
           <div class="flex items-center gap-2 flex-1 max-w-2xl mx-4">
             <div class="relative flex-1 global-search-container">
               <Search class="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                v-model="globalSearchQuery"
-                placeholder="Search all endpoints..."
-                class="pl-8 h-9 text-sm"
-                @focus="showGlobalSearchResults = true"
-                @keydown.escape="showGlobalSearchResults = false"
-              />
-              <div
-                v-if="showGlobalSearchResults && globalSearchResults.length > 0"
+              <Input v-model="globalSearchQuery" placeholder="Search all endpoints..." class="pl-8 h-9 text-sm"
+                autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" type="search"
+                @focus="showGlobalSearchResults = true" @keydown.escape="showGlobalSearchResults = false" />
+              <div v-if="showGlobalSearchResults && globalSearchResults.length > 0"
                 class="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg z-50 max-h-96 overflow-y-auto"
-                @click.stop
-              >
-                <div
-                  v-for="(result, idx) in globalSearchResults"
-                  :key="idx"
+                @click.stop>
+                <div v-for="(result, idx) in globalSearchResults" :key="idx"
                   class="p-3 hover:bg-muted cursor-pointer border-b border-border last:border-b-0"
-                  @click="handleGlobalSearchSelect(result)"
-                >
+                  @click="handleGlobalSearchSelect(result)">
                   <div class="flex items-center gap-2 mb-1">
-                    <span
-                      :class="[
-                        'text-xs font-bold px-2 py-0.5 rounded text-white',
-                        getMethodColorClass(result.method)
-                      ]"
-                    >
+                    <span :class="[
+                      'text-xs font-bold px-2 py-0.5 rounded text-white',
+                      getMethodColorClass(result.method)
+                    ]">
                       {{ result.method }}
                     </span>
                     <span class="text-sm font-medium text-foreground flex-1 truncate">
@@ -75,41 +60,24 @@
                   </p>
                 </div>
               </div>
-              <div
-                v-if="showGlobalSearchResults && globalSearchQuery && globalSearchResults.length === 0"
+              <div v-if="showGlobalSearchResults && globalSearchQuery && globalSearchResults.length === 0"
                 class="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg z-50 p-4 text-center text-sm text-muted-foreground"
-                @click.stop
-              >
+                @click.stop>
                 No results found
               </div>
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <a
-              v-if="isExampleMode"
-              href="https://github.com/quonaro/Specula"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-9 px-3 border border-input bg-background hover:bg-accent hover:text-accent-foreground"
-            >
+            <a v-if="isExampleMode" href="https://github.com/quonaro/Specula" target="_blank" rel="noopener noreferrer"
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-9 px-3 border border-input bg-background hover:bg-accent hover:text-accent-foreground">
               <Github class="h-4 w-4" />
               GitHub
             </a>
-            <Button 
-              v-if="hasSecuritySchemes"
-              variant="outline" 
-              size="sm" 
-              @click="handleAuthorizationClick"
-            >
+            <Button v-if="hasSecuritySchemes" variant="outline" size="sm" @click="handleAuthorizationClick">
               <Key class="h-4 w-4 mr-2" />
               Authorization
             </Button>
-            <Button 
-              v-if="!isStandaloneMode()"
-              variant="outline" 
-              size="sm" 
-              @click="handleBackToSelection"
-            >
+            <Button v-if="!isStandaloneMode()" variant="outline" size="sm" @click="handleBackToSelection">
               <ArrowLeft class="h-4 w-4 mr-2" />
               Back to Selection
             </Button>
@@ -122,52 +90,36 @@
             </Button>
           </div>
         </div>
-        
+
         <!-- Global info banner -->
         <div
           v-if="specStore.specs.length === 1 && specStore.specs[0].spec && (specStore.specs[0].spec.info.description || (specStore.specs[0].spec.servers && specStore.specs[0].spec.servers.length > 0) || specStore.specs[0].spec.externalDocs)"
-          class="px-6 py-3 bg-muted/30 border-t border-border text-sm space-y-2"
-        >
+          class="px-6 py-3 bg-muted/30 border-t border-border text-sm space-y-2">
           <p v-if="specStore.specs[0].spec.info.description" class="text-muted-foreground">
             {{ specStore.specs[0].spec.info.description }}
           </p>
-          <div v-if="specStore.specs[0].spec.servers && specStore.specs[0].spec.servers.length > 0" class="flex items-center gap-2 flex-wrap">
+          <div v-if="specStore.specs[0].spec.servers && specStore.specs[0].spec.servers.length > 0"
+            class="flex items-center gap-2 flex-wrap">
             <span class="font-medium">Servers:</span>
-            <code
-              v-for="(server, idx) in specStore.specs[0].spec.servers"
-              :key="idx"
-              class="px-2 py-0.5 bg-code-bg rounded text-xs"
-            >
+            <code v-for="(server, idx) in specStore.specs[0].spec.servers" :key="idx"
+              class="px-2 py-0.5 bg-code-bg rounded text-xs">
               {{ server.url }}
             </code>
           </div>
-          <a
-            v-if="specStore.specs[0].spec.externalDocs"
-            :href="specStore.specs[0].spec.externalDocs.url"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-primary hover:underline inline-flex items-center gap-1"
-          >
+          <a v-if="specStore.specs[0].spec.externalDocs" :href="specStore.specs[0].spec.externalDocs.url"
+            target="_blank" rel="noopener noreferrer"
+            class="text-primary hover:underline inline-flex items-center gap-1">
             📖 {{ specStore.specs[0].spec.externalDocs.description || 'External Documentation' }}
           </a>
         </div>
       </header>
 
       <main class="flex-1 overflow-hidden">
-        <GroupEndpointsView
-          v-if="selectedGroup"
-          :group-node="selectedGroup"
-          :selected-operation="selectedOperation"
-          @select-operation="handleOperationSelect"
-        />
-        <OperationView
-          v-else-if="operationDetails"
-          :method="operationDetails.method"
-          :path="operationDetails.path"
-          :operation="operationDetails.operation"
-          :spec="operationDetails.spec"
-          :source-url="operationDetails.sourceUrl"
-        />
+        <GroupEndpointsView v-if="selectedGroup" :group-node="selectedGroup" :selected-operation="selectedOperation"
+          @select-operation="handleOperationSelect" />
+        <OperationView v-else-if="operationDetails" :method="operationDetails.method" :path="operationDetails.path"
+          :operation="operationDetails.operation" :spec="operationDetails.spec"
+          :source-url="operationDetails.sourceUrl" />
         <div v-else class="flex items-center justify-center h-full">
           <div class="text-center space-y-2">
             <img :src="logoUrl" alt="Logo" class="mx-auto h-16 w-16 logo-image-opacity" />
@@ -181,46 +133,27 @@
         </div>
       </main>
     </div>
-    
+
     <!-- Download Dialog -->
-    <DownloadDialog
-      v-model="showDownloadDialog"
-      :specs="specStore.specs"
-    />
-    
+    <DownloadDialog v-model="showDownloadDialog" :specs="specStore.specs" />
+
     <!-- Settings Dialog -->
-    <SettingsDialog
-      v-model="showSettingsDialog"
-    />
-    
+    <SettingsDialog v-model="showSettingsDialog" />
+
     <!-- Authorization Settings Dialog -->
-    <AuthorizationSettingsDialog
-      v-if="selectedSpecForAuth"
-      v-model="showAuthorizationDialog"
-      :spec="selectedSpecForAuth.spec"
-      :source-url="selectedSpecForAuth.sourceUrl"
-    />
-    
+    <AuthorizationSettingsDialog v-if="selectedSpecForAuth" v-model="showAuthorizationDialog"
+      :spec="selectedSpecForAuth.spec" :source-url="selectedSpecForAuth.sourceUrl" />
+
     <!-- Spec Selection Dialog for Authorization -->
-    <Dialog
-      v-if="!isStandaloneMode()"
-      v-model="showSpecSelectionDialog"
-      title="Select Specification"
-      :close-on-backdrop="true"
-    >
+    <Dialog v-if="!isStandaloneMode()" v-model="showSpecSelectionDialog" title="Select Specification"
+      :close-on-backdrop="true">
       <div class="space-y-4">
         <p class="text-sm text-muted-foreground">
           Select a specification to configure authorization credentials.
         </p>
         <div class="space-y-2">
-          <Button
-            v-for="(specWithSource, idx) in specsWithSecuritySchemes"
-            :key="idx"
-            variant="outline"
-            size="sm"
-            @click="selectSpecForAuthorization(specWithSource)"
-            class="w-full justify-start"
-          >
+          <Button v-for="(specWithSource, idx) in specsWithSecuritySchemes" :key="idx" variant="outline" size="sm"
+            @click="selectSpecForAuthorization(specWithSource)" class="w-full justify-start">
             <Key class="w-4 h-4 mr-2" />
             {{ specWithSource.spec?.info?.title || specWithSource.title || 'Untitled Specification' }}
           </Button>
@@ -342,7 +275,7 @@ watch(showAuthorizationDialog, (isOpen) => {
 const getSpecIdFromQuery = (): string | null => {
   const specParams = route.query.spec
   if (!specParams) return null
-  
+
   if (Array.isArray(specParams)) {
     // Return the last one (as in the example: d407de6a4b3cc4f8)
     return specParams.length > 0 ? specParams[specParams.length - 1] as string : null
@@ -374,7 +307,7 @@ const findSpecHash = (targetSpec: OpenAPISpec): string | null => {
           }
         }
       }
-      
+
       // Try to find in cache by reference
       const cachedSpecs = Array.from(specCacheStore.cache.values())
       const cached = cachedSpecs.find(c => c.spec === targetSpec)
@@ -383,21 +316,21 @@ const findSpecHash = (targetSpec: OpenAPISpec): string | null => {
       }
     }
   }
-  
+
   // Fallback: search in cache by reference (still faster than JSON.stringify)
   const cachedSpecs = Array.from(specCacheStore.cache.values())
   const cached = cachedSpecs.find(c => c.spec === targetSpec)
   if (cached) {
     return cached.hash
   }
-  
+
   // Last resort: use JSON.stringify only if reference comparison failed
   // This should rarely happen if specs are properly managed
   const cachedByContent = cachedSpecs.find(c => {
     // Quick check: compare basic properties first
     if (c.spec.info?.title !== targetSpec.info?.title ||
-        c.spec.info?.version !== targetSpec.info?.version ||
-        c.spec.openapi !== targetSpec.openapi) {
+      c.spec.info?.version !== targetSpec.info?.version ||
+      c.spec.openapi !== targetSpec.openapi) {
       return false
     }
     // Only then do expensive JSON comparison
@@ -413,55 +346,55 @@ const findFirstOperation = (node: TagNode): { method: string; path: string } | n
     const firstOp = node.operations[0]
     return { method: firstOp.method, path: firstOp.path }
   }
-  
+
   // Recursively check children (sorted for consistent ordering)
-  const sortedChildren = Array.from(node.children.values()).sort((a, b) => 
+  const sortedChildren = Array.from(node.children.values()).sort((a, b) =>
     a.name.localeCompare(b.name)
   )
-  
+
   for (const child of sortedChildren) {
     const found = findFirstOperation(child)
     if (found) {
       return found
     }
   }
-  
+
   return null
 }
 
 // Restore state from route
 const restoreStateFromRoute = () => {
   if (!tagTree.value) return
-  
+
   const path = route.path
-  
+
   // Handle standalone mode with simplified routing format: /:method/:path
   if (isStandaloneMode() && path !== '/' && !path.startsWith('/group/')) {
     const pathSegments = path.split('/').filter(s => s.length > 0)
-    
+
     // Check if path matches format /:method/:path
     if (pathSegments.length >= 2) {
       const method = pathSegments[0]?.toUpperCase()
       const endpointPathFromUrl = '/' + pathSegments.slice(1).join('/')
-      
+
       // Valid HTTP methods
       const validMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD', 'TRACE']
-      
+
       if (method && validMethods.includes(method)) {
         let foundPath: string | null = null
         let foundSpec: OpenAPISpec | null = null
         let foundSpecWithSource: SpecWithSource | null = null
-        
+
         // Get specId from query if specified
         const specIdFromQuery = getSpecIdFromQuery()
         let targetSpec: OpenAPISpec | null = null
-        
+
         if (specIdFromQuery) {
           // Try to find spec by hash from cache
           if (isHash(specIdFromQuery)) {
             targetSpec = specCacheStore.getByHash(specIdFromQuery)
           }
-          
+
           // If found, search only in that spec
           if (targetSpec) {
             for (const specWithSource of specStore.specs) {
@@ -481,13 +414,13 @@ const restoreStateFromRoute = () => {
             }
           }
         }
-        
+
         // If not found with specId, or specId not specified, search in all specs
         if (!foundPath) {
           for (const specWithSource of specStore.specs) {
             // Skip if we already tried this spec
             if (targetSpec && specWithSource.spec === targetSpec) continue
-            
+
             if (specWithSource.spec.paths[endpointPathFromUrl]) {
               const pathItem = specWithSource.spec.paths[endpointPathFromUrl]
               const operation = pathItem[method.toLowerCase() as keyof typeof pathItem]
@@ -500,17 +433,17 @@ const restoreStateFromRoute = () => {
             }
           }
         }
-        
+
         // If not found by exact path, try to match by path segments (handling path parameters)
         if (!foundPath) {
           for (const specWithSource of specStore.specs) {
             // Skip if we already tried this spec
             if (targetSpec && specWithSource.spec === targetSpec) continue
-            
+
             for (const [endpointPath, pathItem] of Object.entries(specWithSource.spec.paths)) {
               const endpointSegments = endpointPath.split('/').filter(s => s.length > 0)
               const urlSegments = pathSegments.slice(1) // Exclude method
-              
+
               // Try to match path segments
               if (endpointSegments.length === urlSegments.length) {
                 let matches = true
@@ -523,7 +456,7 @@ const restoreStateFromRoute = () => {
                     break
                   }
                 }
-                
+
                 if (matches) {
                   const operation = pathItem[method.toLowerCase() as keyof typeof pathItem]
                   if (operation) {
@@ -538,7 +471,7 @@ const restoreStateFromRoute = () => {
             if (foundPath) break
           }
         }
-        
+
         if (foundPath && foundSpec) {
           selectedOperation.value = { method, path: foundPath }
           selectedGroup.value = null
@@ -546,7 +479,7 @@ const restoreStateFromRoute = () => {
           // Endpoint not found, redirect to home
           router.replace('/')
         }
-        
+
         return
       } else {
         // Invalid HTTP method, redirect to home
@@ -559,7 +492,7 @@ const restoreStateFromRoute = () => {
       return
     }
   }
-  
+
   if (path.startsWith('/group/')) {
     const groupSlug = route.params.groupPath as string
     const node = findNodeBySlug(tagTree.value, groupSlug)
@@ -575,14 +508,14 @@ const restoreStateFromRoute = () => {
     const specId = route.params.specId as string
     const method = (route.params.method as string).toUpperCase()
     const endpointSlug = route.params.path as string
-    
+
     // Convert slug back to endpoint path
     const endpointPath = slugToEndpointPath(endpointSlug)
-    
+
     // Verify endpoint exists in any spec
     let foundPath: string | null = null
     let foundSpec: OpenAPISpec | null = null
-    
+
     for (const specWithSource of specStore.specs) {
       if (specWithSource.spec.paths[endpointPath]) {
         const pathItem = specWithSource.spec.paths[endpointPath]
@@ -594,7 +527,7 @@ const restoreStateFromRoute = () => {
         }
       }
     }
-    
+
     if (foundPath && foundSpec) {
       selectedOperation.value = { method, path: foundPath }
       selectedGroup.value = null
@@ -615,7 +548,7 @@ const restoreStateFromRoute = () => {
         }
         if (foundPath) break
       }
-      
+
       if (foundPath && foundSpec) {
         selectedOperation.value = { method, path: foundPath }
         selectedGroup.value = null
@@ -629,7 +562,7 @@ const restoreStateFromRoute = () => {
     const method = (route.params.method as string).toUpperCase()
     const endpointSlug = route.params.path as string
     const endpointPath = slugToEndpointPath(endpointSlug)
-    
+
     // Find the spec that contains this operation
     let foundSpec: OpenAPISpec | null = null
     for (const specWithSource of specStore.specs) {
@@ -642,7 +575,7 @@ const restoreStateFromRoute = () => {
         }
       }
     }
-    
+
     // Get specId from the found spec or fallback to query
     const specId = foundSpec ? findSpecHash(foundSpec) : getSpecIdFromQuery()
     if (specId) {
@@ -650,14 +583,14 @@ const restoreStateFromRoute = () => {
       router.replace({ path: `/spec/${specId}/endpoint/${method.toLowerCase()}/${endpointSlug}`, query })
       return
     }
-    
+
     // Continue with old format if no specId
-    
+
     // Verify endpoint exists in any spec
     let foundPath: string | null = null
     // foundSpec already declared above, reuse it
     foundSpec = null
-    
+
     for (const specWithSource of specStore.specs) {
       if (specWithSource.spec.paths[endpointPath]) {
         const pathItem = specWithSource.spec.paths[endpointPath]
@@ -669,7 +602,7 @@ const restoreStateFromRoute = () => {
         }
       }
     }
-    
+
     if (foundPath && foundSpec) {
       selectedOperation.value = { method, path: foundPath }
       selectedGroup.value = null
@@ -690,7 +623,7 @@ const restoreStateFromRoute = () => {
         }
         if (foundPath) break
       }
-      
+
       if (foundPath && foundSpec) {
         selectedOperation.value = { method, path: foundPath }
         selectedGroup.value = null
@@ -708,20 +641,20 @@ const restoreStateFromRoute = () => {
     // Format: /path/to/endpoint/method where method is HTTP method (GET, POST, etc.)
     const pathWithoutLeadingSlash = path.startsWith('/') ? path.slice(1) : path
     const pathSegments = pathWithoutLeadingSlash.split('/').filter(s => s.length > 0)
-    
+
     // Check if it looks like an endpoint path (has at least method and path)
     if (pathSegments.length >= 2) {
       // Last segment is HTTP method, rest is endpoint path
       const method = pathSegments[pathSegments.length - 1]?.toUpperCase()
       const endpointPathFromUrl = '/' + pathSegments.slice(0, -1).join('/')
-      
+
       // Valid HTTP methods
       const validMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD', 'TRACE']
-      
+
       if (method && validMethods.includes(method)) {
         let foundPath: string | null = null
         let foundSpec: OpenAPISpec | null = null
-        
+
         // First, try exact path match
         for (const specWithSource of specStore.specs) {
           if (specWithSource.spec.paths[endpointPathFromUrl]) {
@@ -734,14 +667,14 @@ const restoreStateFromRoute = () => {
             }
           }
         }
-        
+
         // If not found, try to match by path segments (handling path parameters)
         if (!foundPath) {
           for (const specWithSource of specStore.specs) {
             for (const [endpointPath, pathItem] of Object.entries(specWithSource.spec.paths)) {
               const endpointSegments = endpointPath.split('/').filter(s => s.length > 0)
               const urlSegments = pathSegments.slice(0, -1) // Exclude method
-              
+
               // Try to match path segments
               if (endpointSegments.length === urlSegments.length) {
                 let matches = true
@@ -754,7 +687,7 @@ const restoreStateFromRoute = () => {
                     break
                   }
                 }
-                
+
                 if (matches) {
                   const operation = pathItem[method.toLowerCase() as keyof typeof pathItem]
                   if (operation) {
@@ -768,7 +701,7 @@ const restoreStateFromRoute = () => {
             if (foundPath) break
           }
         }
-        
+
         if (foundPath && foundSpec) {
           selectedOperation.value = { method, path: foundPath }
           selectedGroup.value = null
@@ -807,11 +740,11 @@ let isLoadingFromUrl = false
 // Update URL with current specs
 const updateUrlWithSpecs = (specs: typeof specStore.specs) => {
   const query: Record<string, string | string[]> = { ...route.query }
-  
+
   // Build spec parameters array
   const specParams: string[] = []
   const cachedSpecs = Array.from(specCacheStore.cache.values())
-  
+
   for (const specWithSource of specs) {
     if (specWithSource.sourceUrl) {
       // Use sourceUrl if available
@@ -819,32 +752,32 @@ const updateUrlWithSpecs = (specs: typeof specStore.specs) => {
     } else {
       // Try to find hash in cache by reference first (faster)
       let cached = cachedSpecs.find(c => c.spec === specWithSource.spec)
-      
+
       // Fallback to content comparison only if reference doesn't match
       if (!cached) {
         cached = cachedSpecs.find(c => {
           // Quick check first
           if (c.spec.info?.title !== specWithSource.spec.info?.title ||
-              c.spec.info?.version !== specWithSource.spec.info?.version ||
-              c.spec.openapi !== specWithSource.spec.openapi) {
+            c.spec.info?.version !== specWithSource.spec.info?.version ||
+            c.spec.openapi !== specWithSource.spec.openapi) {
             return false
           }
           return JSON.stringify(c.spec) === JSON.stringify(specWithSource.spec)
         })
       }
-      
+
       if (cached) {
         specParams.push(cached.hash)
       }
     }
   }
-  
+
   if (specParams.length > 0) {
     query.spec = specParams.length === 1 ? specParams[0] : specParams
   } else {
     delete query.spec
   }
-  
+
   // Update URL without triggering navigation
   router.replace({ path: route.path, query })
 }
@@ -946,7 +879,7 @@ watch(() => specStore.specs, (newSpecs, oldSpecs) => {
         const oldSpec = oldSpecs[index]
         return !oldSpec || newSpec.spec !== oldSpec.spec
       })
-    
+
     if (specsChanged) {
       clearOperationCaches()
     }
@@ -954,7 +887,7 @@ watch(() => specStore.specs, (newSpecs, oldSpecs) => {
     // Clear cache when all specs are removed
     clearOperationCaches()
   }
-  
+
   if (newSpecs.length > 0) {
     if (newSpecs.length === 1) {
       // Single spec - use regular parsing
@@ -963,18 +896,18 @@ watch(() => specStore.specs, (newSpecs, oldSpecs) => {
       // Multiple specs - use multi-spec parsing
       tagTree.value = parseMultipleSpecs(newSpecs)
     }
-    
+
     // Add to history when specs are successfully loaded and displayed
     // This ensures only viewed specs are in history
     if (tagTree.value) {
       newSpecs.forEach(specWithSource => {
         specHistoryStore.addToHistory(specWithSource.spec)
       })
-      
+
       // Save current workspace
       lastWorkspaceStore.saveWorkspace(newSpecs)
     }
-    
+
     // Update URL with spec parameters if not loading from URL
     // In standalone mode, only add spec parameter if needed for initial load or multiple specs
     if (!isLoadingFromUrl) {
@@ -984,10 +917,10 @@ watch(() => specStore.specs, (newSpecs, oldSpecs) => {
         // Check if current specs match what's in query - if so, keep it
         // Otherwise update (e.g., when new spec is loaded)
         const currentSpecParams = route.query.spec
-        const specValues = Array.isArray(currentSpecParams) 
-          ? currentSpecParams 
+        const specValues = Array.isArray(currentSpecParams)
+          ? currentSpecParams
           : [currentSpecParams]
-        
+
         // Only update if specs changed (different count or sources)
         const specsChanged = newSpecs.length !== specValues.length ||
           newSpecs.some((spec, idx) => {
@@ -999,7 +932,7 @@ watch(() => specStore.specs, (newSpecs, oldSpecs) => {
               return cached?.hash !== specValues[idx]
             }
           })
-        
+
         if (specsChanged) {
           updateUrlWithSpecs(newSpecs)
         }
@@ -1007,7 +940,7 @@ watch(() => specStore.specs, (newSpecs, oldSpecs) => {
         updateUrlWithSpecs(newSpecs)
       }
     }
-    
+
     // Restore state from URL after tree is built
     restoreStateFromRoute()
   } else {
@@ -1035,12 +968,12 @@ const handleGlobalSearchSelect = (result: SearchResult) => {
   // Find the spec by index
   const spec = specStore.specs[result.specIndex]
   if (!spec) return
-  
+
   // In standalone mode, use simplified format: /:method/:path
   if (isStandaloneMode()) {
     const endpointPath = result.path.startsWith('/') ? result.path.slice(1) : result.path
     const newPath = `/${result.method.toUpperCase()}/${endpointPath}`
-    
+
     // Add spec to query if multiple specs exist
     const query: Record<string, string | string[]> = {}
     if (specStore.specs.length > 1) {
@@ -1049,7 +982,7 @@ const handleGlobalSearchSelect = (result: SearchResult) => {
         query.spec = specId
       }
     }
-    
+
     router.push({ path: newPath, query })
   } else {
     // Non-standalone mode: use original format with slug
@@ -1060,11 +993,11 @@ const handleGlobalSearchSelect = (result: SearchResult) => {
         : `/spec/${result.specIndex}/endpoint/${result.method.toLowerCase()}/${slug}`
     })
   }
-  
+
   // Close search results
   showGlobalSearchResults.value = false
   globalSearchQuery.value = ''
-  
+
   // Select the operation
   selectedOperation.value = { method: result.method, path: result.path }
 }
@@ -1081,7 +1014,7 @@ const handleOperationSelect = (method: string, path: string) => {
   const methodLower = method.toLowerCase()
   // Preserve spec query parameters when navigating
   const query: Record<string, string | string[]> = { ...route.query }
-  
+
   // In standalone mode, use simplified format: /:method/:path
   if (isStandaloneMode()) {
     // Find the spec that contains this operation
@@ -1096,7 +1029,7 @@ const handleOperationSelect = (method: string, path: string) => {
         }
       }
     }
-    
+
     // If multiple specs have the same endpoint, use spec from query if available
     if (!foundSpecWithSource && specStore.specs.length > 0) {
       const specIdFromQuery = getSpecIdFromQuery()
@@ -1112,7 +1045,7 @@ const handleOperationSelect = (method: string, path: string) => {
         }
       }
     }
-    
+
     // If still not found, use first spec that has this endpoint
     if (!foundSpecWithSource) {
       for (const specWithSource of specStore.specs) {
@@ -1126,7 +1059,7 @@ const handleOperationSelect = (method: string, path: string) => {
         }
       }
     }
-    
+
     // In standalone mode, only add spec to query if:
     // 1. Multiple specs exist (to identify which one)
     // 2. Spec was loaded from URL parameter (preserve it)
@@ -1148,17 +1081,17 @@ const handleOperationSelect = (method: string, path: string) => {
         delete query.spec
       }
     }
-    
+
     // Build path: /:method/:path (remove leading slash from path if present)
     const endpointPath = path.startsWith('/') ? path.slice(1) : path
     const newPath = `/${method.toUpperCase()}/${endpointPath}`
     router.push({ path: newPath, query })
     return
   }
-  
+
   // Non-standalone mode: use original format with slug
   const slug = endpointPathToSlug(path)
-  
+
   // Find the spec that contains this operation to get the correct specId
   let specId: string | null = null
   for (const specWithSource of specStore.specs) {
@@ -1172,12 +1105,12 @@ const handleOperationSelect = (method: string, path: string) => {
       }
     }
   }
-  
+
   // Fallback to query if not found
   if (!specId) {
     specId = getSpecIdFromQuery()
   }
-  
+
   if (specId) {
     router.push({ path: `/spec/${specId}/endpoint/${methodLower}/${slug}`, query })
   } else {
@@ -1208,15 +1141,15 @@ const pageTitle = computed(() => {
   if (specStore.specs.length === 0) {
     return 'Specula'
   }
-  
+
   // If operation is selected
   if (selectedOperation.value) {
     const { method, path } = selectedOperation.value
-    
+
     // Find the operation and spec
     let operation: Operation | null = null
     let specTitle: string | undefined = undefined
-    
+
     for (const specWithSource of specStore.specs) {
       const pathItem = specWithSource.spec.paths[path]
       if (pathItem) {
@@ -1228,7 +1161,7 @@ const pageTitle = computed(() => {
         }
       }
     }
-    
+
     if (operation) {
       const summary = operation.summary || operation.operationId || path
       const parts = [method, path]
@@ -1240,30 +1173,30 @@ const pageTitle = computed(() => {
       }
       return `${parts.join(' ')} | Specula`
     }
-    
+
     // Fallback if operation not found
     return `${method} ${path} | Specula`
   }
-  
+
   // If group is selected
   if (selectedGroup.value) {
     const groupName = selectedGroup.value.name
-    const specTitle = specStore.specs.length === 1 
+    const specTitle = specStore.specs.length === 1
       ? (specStore.specs[0].title || specStore.specs[0].spec?.info?.title)
       : undefined
-    
+
     if (specTitle && specStore.specs.length > 1) {
       return `${groupName} - ${specTitle} | Specula`
     }
     return `${groupName} | Specula`
   }
-  
+
   // Default: show spec title(s)
   if (specStore.specs.length === 1) {
     const specTitle = specStore.specs[0].title || specStore.specs[0].spec?.info?.title || 'OpenAPI Specification'
     return `${specTitle} | Specula`
   }
-  
+
   return `${specStore.specs.length} Specifications | Specula`
 })
 
@@ -1297,4 +1230,3 @@ const operationDetails = computed(() => {
   return null
 })
 </script>
-
