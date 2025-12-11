@@ -152,14 +152,16 @@ import Input from './ui/Input.vue'
 import Textarea from './ui/Textarea.vue'
 import Badge from './ui/Badge.vue'
 import { useToast } from '@/composables/useToast'
-import type { Operation, OpenAPISpec } from '@/types/openapi'
+import type { Operation, OpenAPISpec, PathItem, SecurityScheme } from '@/types/openapi'
 import { RefResolver } from '@/utils/ref-resolver'
+import { getOperationSecurity } from '@/utils/openapi-parser'
 
 interface Props {
   method: string
   path: string
   operation: Operation
   spec: OpenAPISpec
+  pathItem?: PathItem
   sourceUrl?: string
   serverUrl?: string
   authorizationCredentials?: Record<string, string>
@@ -495,16 +497,19 @@ const buildRequestUrl = (): string => {
   let url = serverUrl + props.path
   const queryParams: string[] = []
 
-  // Add API key query parameters from authorization
-  if (props.authorizationCredentials && props.operation.security) {
-    props.operation.security.forEach((sec) => {
+  // Add authorization query parameters according to OpenAPI spec
+  if (props.authorizationCredentials && operationSecurity.value) {
+    operationSecurity.value.forEach((sec) => {
       Object.keys(sec).forEach((scheme) => {
         const credential = props.authorizationCredentials?.[scheme]
         if (credential) {
           const securityScheme = props.spec.components?.securitySchemes?.[scheme]
-          if (securityScheme && 'in' in securityScheme && securityScheme.in === 'query') {
-            const name = 'name' in securityScheme ? securityScheme.name : scheme
-            queryParams.push(`${encodeURIComponent(name)}=${encodeURIComponent(credential)}`)
+          if (securityScheme) {
+            // Only add query parameters here (cookies and headers handled separately)
+            if (securityScheme.type === 'apiKey' && securityScheme.in === 'query') {
+              const name = securityScheme.name || scheme
+              queryParams.push(`${encodeURIComponent(name)}=${encodeURIComponent(credential)}`)
+            }
           }
         }
       })
@@ -531,39 +536,20 @@ const buildRequestUrl = (): string => {
   return url
 }
 
-// Get request headers
-const getRequestHeaders = (): Record<string, string> => {
+// Get request headers and cookies
+const getRequestHeaders = (): { headers: Record<string, string>; cookies: string[] } => {
   const headers: Record<string, string> = {}
+  const cookies: string[] = []
   
-  // Add authorization headers
-  if (props.authorizationCredentials && props.operation.security) {
-    props.operation.security.forEach((sec) => {
+  // Add authorization headers and cookies according to OpenAPI spec
+  if (props.authorizationCredentials && operationSecurity.value) {
+    operationSecurity.value.forEach((sec) => {
       Object.keys(sec).forEach((scheme) => {
         const credential = props.authorizationCredentials?.[scheme]
         if (credential) {
-          // Handle different authorization schemes
-          if (scheme.toLowerCase().includes('bearer')) {
-            headers['Authorization'] = `Bearer ${credential}`
-          } else if (scheme.toLowerCase().includes('basic')) {
-            headers['Authorization'] = `Basic ${credential}`
-          } else if (scheme.toLowerCase().includes('apikey')) {
-            // For API key, check if there's a name in security scheme
-            const securityScheme = props.spec.components?.securitySchemes?.[scheme]
-            if (securityScheme && 'name' in securityScheme) {
-              const name = securityScheme.name
-              const inLocation = securityScheme.in || 'header'
-              if (inLocation === 'header') {
-                headers[name] = credential
-              } else if (inLocation === 'query') {
-                // Query params are handled separately
-              }
-            } else {
-              // Default to Authorization header
-              headers['X-API-Key'] = credential
-            }
-          } else {
-            // Default: use scheme name as header name
-            headers[scheme] = credential
+          const securityScheme = props.spec.components?.securitySchemes?.[scheme]
+          if (securityScheme) {
+            applySecurityScheme(scheme, credential, securityScheme, headers, [], cookies)
           }
         }
       })
@@ -595,7 +581,12 @@ const getRequestHeaders = (): Record<string, string> => {
     }
   }
   
-  return headers
+  // Add cookies to Cookie header if any
+  if (cookies.length > 0) {
+    headers['Cookie'] = cookies.join('; ')
+  }
+  
+  return { headers, cookies }
 }
 
 // Generate curl command
@@ -604,7 +595,7 @@ const generateCurlCommand = (): string => {
   if (!url) return '# No server URL configured'
   
   const method = props.method.toUpperCase()
-  const headers = getRequestHeaders()
+  const { headers, cookies } = getRequestHeaders()
   const parts: string[] = ['curl']
   
   // Add method
@@ -616,6 +607,11 @@ const generateCurlCommand = (): string => {
   Object.entries(headers).forEach(([key, value]) => {
     parts.push(`-H "${key}: ${value}"`)
   })
+  
+  // Add cookies if any
+  if (cookies.length > 0) {
+    parts.push(`-H "Cookie: ${cookies.join('; ')}"`)
+  }
   
   // Handle request body
   const hasFileParams = Object.keys(paramFileValues.value).length > 0
@@ -678,7 +674,7 @@ const generateWgetCommand = (): string => {
   if (!url) return '# No server URL configured'
   
   const method = props.method.toUpperCase()
-  const headers = getRequestHeaders()
+  const { headers, cookies } = getRequestHeaders()
   const parts: string[] = ['wget']
   
   // Wget doesn't support all HTTP methods well, so we use --method
@@ -690,6 +686,11 @@ const generateWgetCommand = (): string => {
   Object.entries(headers).forEach(([key, value]) => {
     parts.push(`--header="${key}: ${value}"`)
   })
+  
+  // Add cookies if any
+  if (cookies.length > 0) {
+    parts.push(`--header="Cookie: ${cookies.join('; ')}"`)
+  }
   
   // Handle request body
   const hasFileParams = Object.keys(paramFileValues.value).length > 0
@@ -789,16 +790,19 @@ const handleExecute = async () => {
     let url = serverUrl + props.path
     const queryParams: string[] = []
 
-    // Add API key query parameters from authorization
-    if (props.authorizationCredentials && props.operation.security) {
-      props.operation.security.forEach((sec) => {
+    // Add authorization query parameters according to OpenAPI spec
+    if (props.authorizationCredentials && operationSecurity.value) {
+      operationSecurity.value.forEach((sec) => {
         Object.keys(sec).forEach((scheme) => {
           const credential = props.authorizationCredentials?.[scheme]
           if (credential) {
             const securityScheme = props.spec.components?.securitySchemes?.[scheme]
-            if (securityScheme && 'in' in securityScheme && securityScheme.in === 'query') {
-              const name = 'name' in securityScheme ? securityScheme.name : scheme
-              queryParams.push(`${encodeURIComponent(name)}=${encodeURIComponent(credential)}`)
+            if (securityScheme) {
+              // Only add query parameters here (cookies and headers handled separately)
+              if (securityScheme.type === 'apiKey' && securityScheme.in === 'query') {
+                const name = securityScheme.name || scheme
+                queryParams.push(`${encodeURIComponent(name)}=${encodeURIComponent(credential)}`)
+              }
             }
           }
         })
@@ -834,7 +838,9 @@ const handleExecute = async () => {
     const isOctetStreamBody = requestBodyContentType?.includes('application/octet-stream') || 
                               requestBodyContentType?.includes('*/*')
 
-    const headers: Record<string, string> = {}
+    // Get authorization headers and cookies
+    const { headers: authHeaders, cookies } = getRequestHeaders()
+    const headers: Record<string, string> = { ...authHeaders }
     let body: BodyInit | undefined
 
     // Handle header parameters (always add them)

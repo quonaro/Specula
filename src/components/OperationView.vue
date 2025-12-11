@@ -319,7 +319,7 @@
       <ScrollArea class="h-full [&>div::-webkit-scrollbar]:hidden [&>div]:[scrollbar-width:none]">
         <div class="space-y-6 pl-4">
           <!-- Security (Authorization) -->
-          <template v-if="operation.security && operation.security.length > 0">
+          <template v-if="operationSecurity && operationSecurity.length > 0">
             <Separator />
             <Card class="p-6 space-y-4">
               <div class="flex items-center gap-2">
@@ -328,7 +328,7 @@
               </div>
               <div class="space-y-2">
                 <div
-                  v-for="(sec, idx) in operation.security"
+                  v-for="(sec, idx) in operationSecurity"
                   :key="idx"
                   class="space-y-2"
                 >
@@ -439,6 +439,7 @@
               :path="path" 
               :operation="operation" 
               :spec="spec" 
+              :path-item="pathItem"
               :source-url="sourceUrl"
               :server-url="getCurrentServerUrl()"
               :authorization-credentials="getAuthorizationCredentials"
@@ -550,7 +551,7 @@ import { computed, ref, watch, onMounted } from 'vue'
 import { Copy, Check, Key, Server, FileText, Settings } from 'lucide-vue-next'
 import type { Operation, OpenAPISpec, PathItem } from '@/types/openapi'
 import { RefResolver } from '@/utils/ref-resolver'
-import { isOperationPrivate } from '@/utils/openapi-parser'
+import { isOperationPrivate, getOperationSecurity } from '@/utils/openapi-parser'
 import { getMethodColorClass } from '@/utils/operation-cache'
 import { useAuthorizationStore } from '@/stores/authorization'
 import Badge from './ui/Badge.vue'
@@ -593,6 +594,11 @@ const pathItem = computed(() => {
 // Check if operation is private
 const isPrivate = computed(() => {
   return isOperationPrivate(props.operation, pathItem.value, props.spec)
+})
+
+// Get effective security requirements for this operation
+const operationSecurity = computed(() => {
+  return getOperationSecurity(props.operation, pathItem.value, props.spec)
 })
 
 // Check if Example mode is enabled

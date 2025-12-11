@@ -248,6 +248,40 @@ export function parseMultipleSpecs(specs: SpecWithSource[]): TagNode {
 }
 
 /**
+ * Get security requirements for an operation
+ * Security can be defined at three levels (in order of precedence):
+ * 1. Operation level (operation.security)
+ * 2. Path level (pathItem.security)
+ * 3. Spec level (spec.security)
+ * 
+ * An empty array [] at any level means the endpoint is public (overrides parent security)
+ * Returns the effective security requirements array
+ */
+export function getOperationSecurity(
+  operation: Operation,
+  pathItem: PathItem | undefined,
+  spec: OpenAPISpec
+): Array<Record<string, string[]>> | undefined {
+  // Check operation level security first
+  if (operation.security !== undefined) {
+    return operation.security
+  }
+
+  // Check path level security
+  if (pathItem?.security !== undefined) {
+    return pathItem.security
+  }
+
+  // Check spec level security
+  if (spec.security !== undefined) {
+    return spec.security
+  }
+
+  // No security defined at any level
+  return undefined
+}
+
+/**
  * Check if an operation requires authentication (is private)
  * Security can be defined at three levels (in order of precedence):
  * 1. Operation level (operation.security)
@@ -261,36 +295,17 @@ export function isOperationPrivate(
   pathItem: PathItem | undefined,
   spec: OpenAPISpec
 ): boolean {
-  // Check operation level security first
-  if (operation.security !== undefined) {
-    // Empty array means public (overrides parent)
-    if (operation.security.length === 0) {
-      return false
-    }
-    // Non-empty array means private
-    return true
+  const security = getOperationSecurity(operation, pathItem, spec)
+  
+  if (security === undefined) {
+    return false
   }
-
-  // Check path level security
-  if (pathItem?.security !== undefined) {
-    // Empty array means public (overrides parent)
-    if (pathItem.security.length === 0) {
-      return false
-    }
-    // Non-empty array means private
-    return true
+  
+  // Empty array means public
+  if (security.length === 0) {
+    return false
   }
-
-  // Check spec level security
-  if (spec.security !== undefined) {
-    // Empty array means public
-    if (spec.security.length === 0) {
-      return false
-    }
-    // Non-empty array means private
-    return true
-  }
-
-  // No security defined at any level means public
-  return false
+  
+  // Non-empty array means private
+  return true
 }

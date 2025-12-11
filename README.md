@@ -25,26 +25,31 @@ Try the example version: **[https://quonaro.github.io/Specula/](https://quonaro.
 ## Screenshots
 
 ### Main Page
+
 ![Main Page](docs/screenshots/main-page.png)
 
 Screenshot of the main application page with empty state or loaded specification. Shows the interface for selecting and loading specifications.
 
 ### Upload Specification
+
 ![Upload Specification](docs/screenshots/upload-spec.png)
 
 Screenshot of the OpenAPI specification upload process. Shows various loading methods: file upload, paste from clipboard, load from URL.
 
 ### Endpoints View
+
 ![Endpoints View](docs/screenshots/endpoints-view.png)
 
 Screenshot of the API endpoints list interface. Shows the structure of endpoints, request methods (GET, POST, PUT, DELETE, etc.) and their descriptions.
 
 ### Endpoint Details
+
 ![Endpoint Details](docs/screenshots/endpoint-details.png)
 
 Screenshot of the endpoint detail page. Shows complete information about the endpoint: request parameters, response schema, usage examples.
 
 ### Endpoint Grouping
+
 ![Endpoint Grouping](docs/screenshots/endpoint-grouping.png)
 
 Screenshot showing endpoint grouping functionality. Displays how endpoints are organized into hierarchical groups based on tags, allowing easy navigation through large API specifications with nested tag structures.
