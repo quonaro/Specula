@@ -341,6 +341,9 @@
               <div class="flex items-center gap-2">
                 <FileText class="w-5 h-5 text-primary" />
                 <h3 class="text-lg font-semibold text-foreground">Response</h3>
+                <Badge v-if="response?.status" variant="outline" class="text-sm">
+                  {{ response.status }}
+                </Badge>
               </div>
               <Button v-if="response" variant="ghost" size="sm" @click="handleCopy(getResponseText())">
                 <Check v-if="copied" class="w-4 h-4" />
@@ -654,10 +657,48 @@ const getResponseText = (): string => {
   }
 }
 
+// Copy text to clipboard with fallback
+const copyToClipboard = async (text: string): Promise<boolean> => {
+  // Try modern Clipboard API first
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch (error) {
+      console.warn('Clipboard API failed, trying fallback:', error)
+      // Fall through to fallback method
+    }
+  }
+
+  // Fallback method for older browsers or when Clipboard API fails
+  try {
+    const textArea = document.createElement('textarea')
+    textArea.value = text
+    textArea.style.position = 'fixed'
+    textArea.style.left = '-999999px'
+    textArea.style.top = '-999999px'
+    document.body.appendChild(textArea)
+    textArea.focus()
+    textArea.select()
+
+    const successful = document.execCommand('copy')
+    document.body.removeChild(textArea)
+
+    if (!successful) {
+      throw new Error('execCommand copy failed')
+    }
+    return true
+  } catch (error) {
+    console.error('Fallback copy method failed:', error)
+    return false
+  }
+}
+
 // Handle copy
 const handleCopy = async (text: string) => {
-  try {
-    await navigator.clipboard.writeText(text)
+  const success = await copyToClipboard(text)
+
+  if (success) {
     copied.value = true
     setTimeout(() => {
       copied.value = false
@@ -666,11 +707,10 @@ const handleCopy = async (text: string) => {
       title: 'Copied!',
       description: 'Response copied to clipboard',
     })
-  } catch (error) {
-    console.error('Failed to copy response:', error)
+  } else {
     toast({
       title: 'Copy Failed',
-      description: 'Failed to copy response to clipboard',
+      description: 'Failed to copy response to clipboard. Please try selecting and copying manually.',
       variant: 'destructive',
     })
   }
@@ -805,9 +845,10 @@ const getResponseExampleJson = (schema: any): string => {
 
 // Handle copy schema JSON
 const handleCopySchemaJson = async (code: string, contentType: string, schema: any) => {
-  try {
-    const jsonText = getSchemaAsJson(schema)
-    await navigator.clipboard.writeText(jsonText)
+  const jsonText = getSchemaAsJson(schema)
+  const success = await copyToClipboard(jsonText)
+
+  if (success) {
     const key = `${code}-${contentType}-json`
     schemaJsonCopied.value.set(key, true)
     setTimeout(() => {
@@ -817,11 +858,10 @@ const handleCopySchemaJson = async (code: string, contentType: string, schema: a
       title: 'Copied!',
       description: 'Schema JSON copied to clipboard',
     })
-  } catch (error) {
-    console.error('Failed to copy schema JSON:', error)
+  } else {
     toast({
       title: 'Copy Failed',
-      description: 'Failed to copy schema JSON to clipboard',
+      description: 'Failed to copy schema JSON to clipboard. Please try selecting and copying manually.',
       variant: 'destructive',
     })
   }
@@ -835,9 +875,10 @@ const getCopiedState = (code: string, contentType: string): boolean => {
 
 // Handle copy response example
 const handleCopyResponseExample = async (code: string, contentType: string, schema: any) => {
-  try {
-    const exampleJson = getResponseExampleJson(schema)
-    await navigator.clipboard.writeText(exampleJson)
+  const exampleJson = getResponseExampleJson(schema)
+  const success = await copyToClipboard(exampleJson)
+
+  if (success) {
     const key = `${code}-${contentType}-response`
     responseExampleCopied.value.set(key, true)
     setTimeout(() => {
@@ -847,11 +888,10 @@ const handleCopyResponseExample = async (code: string, contentType: string, sche
       title: 'Copied!',
       description: 'Response example copied to clipboard',
     })
-  } catch (error) {
-    console.error('Failed to copy response example:', error)
+  } else {
     toast({
       title: 'Copy Failed',
-      description: 'Failed to copy response example to clipboard',
+      description: 'Failed to copy response example to clipboard. Please try selecting and copying manually.',
       variant: 'destructive',
     })
   }
