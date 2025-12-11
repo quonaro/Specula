@@ -319,54 +319,14 @@
                 <FileText class="w-5 h-5 text-primary" />
                 <h3 class="text-lg font-semibold text-foreground">Response</h3>
               </div>
-              <Button v-if="response" variant="ghost" size="sm" @click="handleCopy(JSON.stringify(response, null, 2))">
+              <Button v-if="response" variant="ghost" size="sm" @click="handleCopy(getResponseText())">
                 <Check v-if="copied" class="w-4 h-4" />
                 <Copy v-else class="w-4 h-4" />
               </Button>
             </div>
 
-            <div v-if="!response" class="text-sm text-muted-foreground text-center py-8">
-              No response yet. Execute a request to see the response here.
-            </div>
-
-            <template v-else>
-              <Card v-if="response && response.error" class="p-4 bg-destructive/10 border-destructive">
-                <p class="text-sm font-semibold text-destructive">Error</p>
-                <p class="text-xs text-muted-foreground mt-1">
-                  {{ response.message }}
-                </p>
-              </Card>
-
-              <template v-else-if="response && !response.error">
-                <div class="flex gap-2 flex-wrap">
-                  <Badge :variant="response.status >= 200 && response.status < 300 ? 'default' : 'destructive'">
-                    {{ response.status || 'N/A' }} {{ response.statusText || '' }}
-                  </Badge>
-                  <Badge v-if="response.duration" variant="outline">{{ response.duration }}ms</Badge>
-                </div>
-
-                <Tabs :model-value="responseTab" @update:model-value="responseTab = $event" class="w-full">
-                  <TabsList class="w-full">
-                    <TabsTrigger value="body" class="flex-1">Body</TabsTrigger>
-                    <TabsTrigger value="headers" class="flex-1">Headers</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="body">
-                    <Textarea :model-value="response && response.data !== undefined && response.data !== null
-                      ? (typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2))
-                      : '(empty response)'" readonly
-                      class="h-[300px] w-full bg-code-bg border border-code-border text-xs font-mono resize-none" />
-                  </TabsContent>
-
-                  <TabsContent value="headers">
-                    <Textarea :model-value="response.headers && Object.keys(response.headers).length > 0
-                      ? Object.entries(response.headers).map(([key, value]) => `${key}: ${value}`).join('\n')
-                      : 'No headers'" readonly
-                      class="h-[300px] w-full bg-code-bg border border-code-border text-xs font-mono resize-none" />
-                  </TabsContent>
-                </Tabs>
-              </template>
-            </template>
+            <Textarea :model-value="getResponseText()" readonly
+              class="h-[400px] w-full bg-code-bg border border-code-border text-xs font-mono resize-none" />
           </Card>
         </div>
       </ScrollArea>
@@ -389,10 +349,6 @@ import Input from './ui/Input.vue'
 import Textarea from './ui/Textarea.vue'
 import ScrollArea from './ui/ScrollArea.vue'
 import Separator from './ui/Separator.vue'
-import Tabs from './ui/Tabs.vue'
-import TabsList from './ui/TabsList.vue'
-import TabsTrigger from './ui/TabsTrigger.vue'
-import TabsContent from './ui/TabsContent.vue'
 import SchemaView from './SchemaView.vue'
 import CallbacksView from './CallbacksView.vue'
 import LinksView from './LinksView.vue'
@@ -434,7 +390,6 @@ const operationSecurity = computed(() => {
 const customServerUrl = ref('')
 const response = ref<any>(null)
 const copied = ref(false)
-const responseTab = ref('body')
 
 // Format selection for Responses schemas (JSON or Beauty)
 // Key format: `${code}-${contentType}`
@@ -625,8 +580,50 @@ const handleResponse = (responseData: any) => {
       error: responseData.error || false,
       message: responseData.message
     }
-    // Reset tab to body when new response arrives
-    responseTab.value = 'body'
+  }
+}
+
+// Get response text for display
+const getResponseText = (): string => {
+  if (!response.value) {
+    return 'No response yet. Execute a request to see the response here.'
+  }
+
+  try {
+    // If there's an error, show error information
+    if (response.value.error) {
+      const errorInfo = {
+        error: true,
+        message: response.value.message || 'Unknown error',
+        status: response.value.status,
+        statusText: response.value.statusText
+      }
+      return JSON.stringify(errorInfo, null, 2)
+    }
+
+    // If response has data, format it as JSON
+    if (response.value.data !== undefined && response.value.data !== null) {
+      // If data is already a string, try to parse it as JSON, otherwise return as is
+      if (typeof response.value.data === 'string') {
+        try {
+          // Try to parse and re-stringify to format it nicely
+          const parsed = JSON.parse(response.value.data)
+          return JSON.stringify(parsed, null, 2)
+        } catch {
+          // If it's not valid JSON, return as is
+          return response.value.data
+        }
+      } else {
+        // If data is an object, stringify it
+        return JSON.stringify(response.value.data, null, 2)
+      }
+    } else {
+      // If no data, return empty response message
+      return '(empty response)'
+    }
+  } catch (error) {
+    // Fallback: return stringified response object
+    return JSON.stringify(response.value, null, 2)
   }
 }
 
