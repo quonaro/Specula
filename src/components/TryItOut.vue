@@ -6,28 +6,16 @@
         <h3 class="text-lg font-semibold text-foreground">Params</h3>
       </div>
       <div class="flex gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          @click="commandFormat = 'edit'"
-          :class="commandFormat === 'edit' ? 'bg-muted' : ''"
-        >
+        <Button variant="ghost" size="sm" @click="commandFormat = 'edit'"
+          :class="commandFormat === 'edit' ? 'bg-muted' : ''">
           Edit
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          @click="commandFormat = 'curl'"
-          :class="commandFormat === 'curl' ? 'bg-muted' : ''"
-        >
+        <Button variant="ghost" size="sm" @click="commandFormat = 'curl'"
+          :class="commandFormat === 'curl' ? 'bg-muted' : ''">
           cURL
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          @click="commandFormat = 'wget'"
-          :class="commandFormat === 'wget' ? 'bg-muted' : ''"
-        >
+        <Button variant="ghost" size="sm" @click="commandFormat = 'wget'"
+          :class="commandFormat === 'wget' ? 'bg-muted' : ''">
           Wget
         </Button>
       </div>
@@ -38,11 +26,7 @@
       <!-- Parameters -->
       <div v-if="hasParameters" class="space-y-3">
         <h4 class="text-sm font-semibold">Parameters</h4>
-        <div
-          v-for="(param, idx) in parameters"
-          :key="idx"
-          class="space-y-1"
-        >
+        <div v-for="(param, idx) in parameters" :key="idx" class="space-y-1">
           <div class="flex items-center gap-2 flex-wrap">
             <label class="text-sm font-medium">
               {{ resolver.resolve(param).name }}
@@ -65,23 +49,17 @@
           </p>
           <!-- File input for binary parameters -->
           <div v-if="isFileParameter(param)" class="space-y-2">
-            <input
-              type="file"
-              :id="`file-param-${idx}`"
+            <input type="file" :id="`file-param-${idx}`"
               @change="(e: Event) => handleFileParamChange(resolver.resolve(param).name, e)"
-              class="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-            />
+              class="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" />
             <p v-if="paramFileValues[resolver.resolve(param).name]" class="text-xs text-muted-foreground">
               Selected: {{ paramFileValues[resolver.resolve(param).name]?.name }}
             </p>
           </div>
           <!-- Regular input for non-file parameters -->
-          <Input
-            v-else
-            :model-value="paramValues[resolver.resolve(param).name] || ''"
+          <Input v-else :model-value="paramValues[resolver.resolve(param).name] || ''"
             @update:model-value="(val: string) => updateParamValue(resolver.resolve(param).name, val)"
-            :placeholder="`Enter ${resolver.resolve(param).name}`"
-          />
+            :placeholder="`Enter ${resolver.resolve(param).name}`" />
         </div>
       </div>
 
@@ -90,24 +68,15 @@
         <h4 class="text-sm font-semibold">Request Body</h4>
         <!-- File upload for binary/multipart request body -->
         <div v-if="isRequestBodyFile" class="space-y-2">
-          <input
-            type="file"
-            id="request-body-file"
-            @change="handleRequestBodyFileChange"
-            class="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-          />
+          <input type="file" id="request-body-file" @change="handleRequestBodyFileChange"
+            class="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" />
           <p v-if="requestBodyFile" class="text-xs text-muted-foreground">
             Selected: {{ requestBodyFile.name }}
           </p>
         </div>
         <!-- JSON textarea for JSON request body -->
-        <Textarea
-          v-else
-          :model-value="requestBody"
-          @update:model-value="requestBody = $event"
-          placeholder="Enter JSON request body"
-          class="font-mono text-xs min-h-[150px]"
-        />
+        <Textarea v-else :model-value="requestBody" @update:model-value="requestBody = $event"
+          placeholder="Enter JSON request body" class="font-mono text-xs min-h-[150px]" />
       </div>
     </template>
 
@@ -115,13 +84,9 @@
     <template v-else>
       <div class="space-y-2">
         <div class="relative">
-          <pre class="bg-code-bg border border-code-border rounded-lg p-3 text-xs overflow-x-auto font-mono min-h-[100px] max-h-[300px] overflow-y-auto">{{ generatedCommand }}</pre>
-          <Button
-            variant="ghost"
-            size="sm"
-            @click="handleCopyCommand(generatedCommand)"
-            class="absolute top-2 right-2"
-          >
+          <Textarea :model-value="generatedCommand" readonly
+            class="bg-code-bg border border-code-border text-xs font-mono min-h-[100px] max-h-[300px] resize-none" />
+          <Button variant="ghost" size="sm" @click="handleCopyCommand(generatedCommand)" class="absolute top-2 right-2">
             <Check v-if="commandCopied" class="w-4 h-4" />
             <Copy v-else class="w-4 h-4" />
           </Button>
@@ -130,12 +95,8 @@
     </template>
 
     <!-- Execute/Cancel Button -->
-    <Button
-      @click="isExecuting ? handleCancel() : handleExecute()"
-      :disabled="false"
-      :variant="isExecuting ? 'destructive' : 'default'"
-      class="w-full"
-    >
+    <Button @click="isExecuting ? handleCancel() : handleExecute()" :disabled="false"
+      :variant="isExecuting ? 'destructive' : 'default'" class="w-full">
       <X v-if="isExecuting" class="w-4 h-4 mr-2" />
       <Play v-else class="w-4 h-4 mr-2" />
       {{ isExecuting ? 'Cancel' : 'Execute' }}
@@ -209,7 +170,7 @@ const getRequestBodyExample = (): string => {
   // Try to find examples in content types (prioritize application/json)
   const contentTypes = Object.keys(resolvedBody.value.content)
   const jsonContentType = contentTypes.find(ct => ct.includes('json')) || contentTypes[0]
-  
+
   if (!jsonContentType) {
     return '{}'
   }
@@ -341,15 +302,15 @@ const updateParamValue = (name: string, value: string) => {
 const getParameterType = (param: any): string => {
   const resolved = resolver.resolve(param)
   if (!resolved.schema) return ''
-  
+
   const schema = resolver.resolve(resolved.schema)
-  
+
   // Handle $ref
   if (schema.$ref) {
     const refName = schema.$ref.split('/').pop()
     return refName || ''
   }
-  
+
   // Handle array
   if (schema.type === 'array') {
     if (schema.items) {
@@ -362,56 +323,56 @@ const getParameterType = (param: any): string => {
     }
     return 'array'
   }
-  
+
   // Handle object
   if (schema.type === 'object') {
     return 'object'
   }
-  
+
   // Handle primitive types
   if (schema.type) {
     return schema.format ? `${schema.type}(${schema.format})` : schema.type
   }
-  
+
   return ''
 }
 
 // Get color class for type
 const getTypeColorClass = (type: string): string => {
   if (!type) return 'text-muted-foreground'
-  
+
   const lowerType = type.toLowerCase()
-  
+
   // String types - blue
   if (lowerType.startsWith('string') || lowerType.includes('string')) {
     return 'text-blue-400'
   }
-  
+
   // Number types - green
   if (lowerType.includes('number') || lowerType.includes('integer') || lowerType.includes('float') || lowerType.includes('double')) {
     return 'text-green-400'
   }
-  
+
   // Boolean - purple
   if (lowerType.includes('boolean') || lowerType === 'bool') {
     return 'text-purple-400'
   }
-  
+
   // Array - orange
   if (lowerType.startsWith('array')) {
     return 'text-orange-400'
   }
-  
+
   // Object - yellow
   if (lowerType.includes('object')) {
     return 'text-yellow-400'
   }
-  
+
   // Date/time formats - cyan
   if (lowerType.includes('date') || lowerType.includes('time')) {
     return 'text-cyan-400'
   }
-  
+
   // Default - muted
   return 'text-muted-foreground'
 }
@@ -426,8 +387,8 @@ const isFileParameter = (param: any): boolean => {
   if (resolved.content) {
     // Check if content type indicates binary
     const contentTypes = Object.keys(resolved.content)
-    return contentTypes.some(ct => 
-      ct.includes('octet-stream') || 
+    return contentTypes.some(ct =>
+      ct.includes('octet-stream') ||
       ct.includes('binary') ||
       ct.includes('multipart')
     )
@@ -456,8 +417,8 @@ const isRequestBodyFile = computed(() => {
     return false
   }
   const contentTypes = Object.keys(resolvedBody.value.content)
-  return contentTypes.some(ct => 
-    ct.includes('multipart/form-data') || 
+  return contentTypes.some(ct =>
+    ct.includes('multipart/form-data') ||
     ct.includes('application/octet-stream') ||
     ct.includes('*/*')
   )
@@ -498,7 +459,7 @@ onMounted(() => {
 const buildRequestUrl = (): string => {
   const serverUrl = props.serverUrl || ''
   if (!serverUrl) return ''
-  
+
   let url = serverUrl + props.path
   const queryParams: string[] = []
 
@@ -524,7 +485,7 @@ const buildRequestUrl = (): string => {
   parameters.value.forEach((param) => {
     const resolvedParam = resolver.resolve(param)
     const value = paramValues.value[resolvedParam.name]
-    
+
     if (value) {
       if (resolvedParam.in === 'path') {
         url = url.replace(`{${resolvedParam.name}}`, encodeURIComponent(value))
@@ -537,7 +498,7 @@ const buildRequestUrl = (): string => {
   if (queryParams.length > 0) {
     url += '?' + queryParams.join('&')
   }
-  
+
   return url
 }
 
@@ -545,7 +506,7 @@ const buildRequestUrl = (): string => {
 const getRequestHeaders = (): { headers: Record<string, string>; cookies: string[] } => {
   const headers: Record<string, string> = {}
   const cookies: string[] = []
-  
+
   // Add authorization headers according to OpenAPI SecurityScheme specification
   if (props.authorizationCredentials && operationSecurity.value) {
     operationSecurity.value.forEach((sec) => {
@@ -562,7 +523,7 @@ const getRequestHeaders = (): { headers: Record<string, string>; cookies: string
                 if (httpScheme.toLowerCase() === 'bearer') {
                   // Bearer token authentication
                   const bearerFormat = securityScheme.bearerFormat
-                  headers['Authorization'] = bearerFormat 
+                  headers['Authorization'] = bearerFormat
                     ? `${bearerFormat} ${credential}`
                     : `Bearer ${credential}`
                 } else if (httpScheme.toLowerCase() === 'basic') {
@@ -611,7 +572,7 @@ const getRequestHeaders = (): { headers: Record<string, string>; cookies: string
       })
     })
   }
-  
+
   // Add header parameters
   parameters.value.forEach((param) => {
     const resolvedParam = resolver.resolve(param)
@@ -620,14 +581,14 @@ const getRequestHeaders = (): { headers: Record<string, string>; cookies: string
       headers[resolvedParam.name] = value
     }
   })
-  
+
   // Add content type if needed
   if (hasRequestBody.value && resolvedBody.value?.content) {
     const requestBodyContentType = Object.keys(resolvedBody.value.content)[0]
     const isMultipartBody = requestBodyContentType?.includes('multipart/form-data')
-    const isOctetStreamBody = requestBodyContentType?.includes('application/octet-stream') || 
-                              requestBodyContentType?.includes('*/*')
-    
+    const isOctetStreamBody = requestBodyContentType?.includes('application/octet-stream') ||
+      requestBodyContentType?.includes('*/*')
+
     if (!isMultipartBody) {
       if (isOctetStreamBody && requestBodyFile.value) {
         headers['Content-Type'] = requestBodyContentType || 'application/octet-stream'
@@ -636,12 +597,12 @@ const getRequestHeaders = (): { headers: Record<string, string>; cookies: string
       }
     }
   }
-  
+
   // Add cookies to Cookie header if any
   if (cookies.length > 0) {
     headers['Cookie'] = cookies.join('; ')
   }
-  
+
   return { headers, cookies }
 }
 
@@ -649,37 +610,37 @@ const getRequestHeaders = (): { headers: Record<string, string>; cookies: string
 const generateCurlCommand = (): string => {
   const url = buildRequestUrl()
   if (!url) return '# No server URL configured'
-  
+
   const method = props.method.toUpperCase()
   const { headers, cookies } = getRequestHeaders()
   const parts: string[] = ['curl']
-  
+
   // Add method
   if (method !== 'GET') {
     parts.push(`-X ${method}`)
   }
-  
+
   // Add headers
   Object.entries(headers).forEach(([key, value]) => {
     parts.push(`-H "${key}: ${value}"`)
   })
-  
+
   // Add cookies if any
   if (cookies.length > 0) {
     parts.push(`-H "Cookie: ${cookies.join('; ')}"`)
   }
-  
+
   // Handle request body
   const hasFileParams = Object.keys(paramFileValues.value).length > 0
   const hasFileRequestBody = requestBodyFile.value !== null
-  
+
   if (hasFileParams || (hasFileRequestBody && isRequestBodyFile.value)) {
     // For multipart/form-data, we need to add form fields
-    const requestBodyContentType = hasRequestBody.value && resolvedBody.value?.content 
-      ? Object.keys(resolvedBody.value.content)[0] 
+    const requestBodyContentType = hasRequestBody.value && resolvedBody.value?.content
+      ? Object.keys(resolvedBody.value.content)[0]
       : null
     const isMultipartBody = requestBodyContentType?.includes('multipart/form-data')
-    
+
     if (isMultipartBody || hasFileParams) {
       // Add file parameters
       parameters.value.forEach((param) => {
@@ -694,7 +655,7 @@ const generateCurlCommand = (): string => {
           }
         }
       })
-      
+
       // Add request body file
       if (hasFileRequestBody && requestBodyFile.value && isMultipartBody) {
         parts.push(`-F "file=@${requestBodyFile.value.name}"`)
@@ -717,10 +678,10 @@ const generateCurlCommand = (): string => {
       parts.push(`-d '${escapedBody}'`)
     }
   }
-  
+
   // Add URL
   parts.push(`"${url}"`)
-  
+
   return parts.join(' \\\n  ')
 }
 
@@ -728,38 +689,38 @@ const generateCurlCommand = (): string => {
 const generateWgetCommand = (): string => {
   const url = buildRequestUrl()
   if (!url) return '# No server URL configured'
-  
+
   const method = props.method.toUpperCase()
   const { headers, cookies } = getRequestHeaders()
   const parts: string[] = ['wget']
-  
+
   // Wget doesn't support all HTTP methods well, so we use --method
   if (method !== 'GET') {
     parts.push(`--method=${method}`)
   }
-  
+
   // Add headers
   Object.entries(headers).forEach(([key, value]) => {
     parts.push(`--header="${key}: ${value}"`)
   })
-  
+
   // Add cookies if any
   if (cookies.length > 0) {
     parts.push(`--header="Cookie: ${cookies.join('; ')}"`)
   }
-  
+
   // Handle request body
   const hasFileParams = Object.keys(paramFileValues.value).length > 0
   const hasFileRequestBody = requestBodyFile.value !== null
-  
+
   if (hasFileParams || (hasFileRequestBody && isRequestBodyFile.value)) {
     // Wget has limited support for multipart/form-data
     // We'll show a note about this limitation
-    const requestBodyContentType = hasRequestBody.value && resolvedBody.value?.content 
-      ? Object.keys(resolvedBody.value.content)[0] 
+    const requestBodyContentType = hasRequestBody.value && resolvedBody.value?.content
+      ? Object.keys(resolvedBody.value.content)[0]
       : null
     const isMultipartBody = requestBodyContentType?.includes('multipart/form-data')
-    
+
     if (isMultipartBody || hasFileParams) {
       // Generate curl command as alternative
       const curlCmd = generateCurlCommand()
@@ -781,10 +742,10 @@ const generateWgetCommand = (): string => {
       parts.push(`--post-data='${escapedBody}'`)
     }
   }
-  
+
   // Add URL
   parts.push(`"${url}"`)
-  
+
   return parts.join(' \\\n  ')
 }
 
@@ -827,7 +788,7 @@ const handleCancel = () => {
 const handleExecute = async () => {
   isExecuting.value = true
   response.value = null
-  
+
   // Create new AbortController for this request
   abortController.value = new AbortController()
 
@@ -842,7 +803,7 @@ const handleExecute = async () => {
       isExecuting.value = false
       return
     }
-    
+
     let url = serverUrl + props.path
     const queryParams: string[] = []
 
@@ -868,7 +829,7 @@ const handleExecute = async () => {
     parameters.value.forEach((param) => {
       const resolvedParam = resolver.resolve(param)
       const value = paramValues.value[resolvedParam.name]
-      
+
       if (value) {
         if (resolvedParam.in === 'path') {
           url = url.replace(`{${resolvedParam.name}}`, encodeURIComponent(value))
@@ -885,14 +846,14 @@ const handleExecute = async () => {
     // Check if we have file parameters or file request body
     const hasFileParams = Object.keys(paramFileValues.value).length > 0
     const hasFileRequestBody = requestBodyFile.value !== null
-    
+
     // Determine content type for request body
-    const requestBodyContentType = hasRequestBody.value && resolvedBody.value?.content 
-      ? Object.keys(resolvedBody.value.content)[0] 
+    const requestBodyContentType = hasRequestBody.value && resolvedBody.value?.content
+      ? Object.keys(resolvedBody.value.content)[0]
       : null
     const isMultipartBody = requestBodyContentType?.includes('multipart/form-data')
-    const isOctetStreamBody = requestBodyContentType?.includes('application/octet-stream') || 
-                              requestBodyContentType?.includes('*/*')
+    const isOctetStreamBody = requestBodyContentType?.includes('application/octet-stream') ||
+      requestBodyContentType?.includes('*/*')
 
     // Get authorization headers and cookies
     const { headers: authHeaders, cookies } = getRequestHeaders()
@@ -997,7 +958,7 @@ const handleExecute = async () => {
 
     const contentType = res.headers.get('content-type')
     let responseData
-    
+
     if (contentType?.includes('application/json')) {
       responseData = await res.json()
     } else {
@@ -1032,7 +993,7 @@ const handleExecute = async () => {
       abortController.value = null
       return
     }
-    
+
     const serverUrl = props.serverUrl || ''
     response.value = {
       error: true,
@@ -1041,7 +1002,7 @@ const handleExecute = async () => {
     }
 
     emit('response', response.value)
-    
+
     toast({
       title: 'Request Failed',
       description: error.message,
@@ -1054,4 +1015,3 @@ const handleExecute = async () => {
 }
 
 </script>
-
