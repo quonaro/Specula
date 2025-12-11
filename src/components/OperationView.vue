@@ -491,14 +491,12 @@
 
                   <TabsContent value="body">
                     <ScrollArea class="h-[300px] w-full">
-                      <pre class="bg-code-bg border border-code-border rounded-lg p-3 text-xs overflow-x-auto">
-                        <template v-if="response && response.data !== undefined && response.data !== null">
-                          {{ typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2) }}
-                        </template>
-                        <template v-else>
-                          (empty response)
-                        </template>
+                      <pre v-if="response && response.data !== undefined && response.data !== null" class="bg-code-bg border border-code-border rounded-lg p-3 text-xs overflow-x-auto whitespace-pre-wrap break-words">
+                        {{ typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2) }}
                       </pre>
+                      <div v-else class="bg-code-bg border border-code-border rounded-lg p-3 text-xs text-muted-foreground text-center">
+                        (empty response)
+                      </div>
                     </ScrollArea>
                   </TabsContent>
 
