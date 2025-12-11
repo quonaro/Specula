@@ -181,18 +181,41 @@
                           </button>
                           <button :class="[
                             'px-2.5 py-1 text-xs font-medium rounded transition-all',
-                            getResponseFormat(code, contentType) === 'json'
+                            getResponseFormat(code, contentType) === 'response'
                               ? 'bg-background text-foreground shadow-sm'
                               : 'text-muted-foreground hover:text-foreground'
-                          ]" @click="setResponseFormat(code, contentType, 'json')">
-                            JSON
+                          ]" @click="setResponseFormat(code, contentType, 'response')">
+                            Response
+                          </button>
+                          <button :class="[
+                            'px-2.5 py-1 text-xs font-medium rounded transition-all',
+                            getResponseFormat(code, contentType) === 'metadata'
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground'
+                          ]" @click="setResponseFormat(code, contentType, 'metadata')">
+                            Metadata
                           </button>
                         </div>
                       </div>
                     </div>
                     <SchemaView v-if="mediaType?.schema && getResponseFormat(code, contentType) === 'beauty'"
                       :schema="mediaType.schema" title="Schema" :resolver="resolver" />
-                    <div v-if="mediaType?.schema && getResponseFormat(code, contentType) === 'json'"
+                    <div v-if="mediaType?.schema && getResponseFormat(code, contentType) === 'response'"
+                      class="mt-2 space-y-2">
+                      <div class="flex items-center justify-between">
+                        <h4 class="text-sm font-semibold">Response Example</h4>
+                        <Button variant="ghost" size="sm" class="h-7 px-2 text-xs"
+                          @click="handleCopyResponseExample(code, contentType, mediaType.schema)">
+                          <Check v-if="getCopiedResponseState(code, contentType)" class="w-3.5 h-3.5" />
+                          <Copy v-else class="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                      <div class="relative">
+                        <pre
+                          class="bg-code-bg border border-code-border rounded-lg p-4 overflow-x-auto text-xs font-mono leading-relaxed"><code>{{ getResponseExampleJson(mediaType.schema) }}</code></pre>
+                      </div>
+                    </div>
+                    <div v-if="mediaType?.schema && getResponseFormat(code, contentType) === 'metadata'"
                       class="mt-2 space-y-2">
                       <div class="flex items-center justify-between">
                         <h4 class="text-sm font-semibold">Schema</h4>
@@ -393,12 +416,14 @@ const customServerUrl = ref('')
 const response = ref<any>(null)
 const copied = ref(false)
 
-// Format selection for Responses schemas (JSON or Beauty)
+// Format selection for Responses schemas (Beauty, Response, Metadata)
 // Key format: `${code}-${contentType}`
-const responseSchemaFormats = ref<Map<string, 'json' | 'beauty'>>(new Map())
+const responseSchemaFormats = ref<Map<string, 'beauty' | 'response' | 'metadata'>>(new Map())
 
-// Track copied state for each schema JSON
+// Track copied state for each schema JSON (Metadata format)
 const schemaJsonCopied = ref<Map<string, boolean>>(new Map())
+// Track copied state for each response example (Response format)
+const responseExampleCopied = ref<Map<string, boolean>>(new Map())
 
 // Authorization management
 const authorizationStore = useAuthorizationStore()
@@ -651,25 +676,130 @@ const handleCopy = async (text: string) => {
   }
 }
 
-// Get response schema format (default to 'beauty')
-const getResponseFormat = (code: string, contentType: string): 'json' | 'beauty' => {
+// Get response schema format (default to 'response')
+const getResponseFormat = (code: string, contentType: string): 'beauty' | 'response' | 'metadata' => {
   const key = `${code}-${contentType}`
-  return responseSchemaFormats.value.get(key) || 'beauty'
+  return responseSchemaFormats.value.get(key) || 'response'
 }
 
 // Set response schema format
-const setResponseFormat = (code: string, contentType: string, format: 'json' | 'beauty') => {
+const setResponseFormat = (code: string, contentType: string, format: 'beauty' | 'response' | 'metadata') => {
   const key = `${code}-${contentType}`
   responseSchemaFormats.value.set(key, format)
 }
 
-// Convert schema to JSON string
+// Convert schema to JSON string (for Metadata format)
 const getSchemaAsJson = (schema: any): string => {
   try {
     const resolvedSchema = resolver.resolve(schema)
     return JSON.stringify(resolvedSchema, null, 2)
   } catch (error) {
     return JSON.stringify(schema, null, 2)
+  }
+}
+
+// Generate example JSON from schema (for Response format)
+const generateExampleFromSchema = (schema: any): any => {
+  if (!schema) return null
+
+  const resolvedSchema = resolver.resolve(schema)
+
+  // Handle resolution errors (circular refs, external refs, not found)
+  if (resolvedSchema.__circular || resolvedSchema.__external || resolvedSchema.__notFound) {
+    return null
+  }
+
+  // Handle allOf, oneOf, anyOf
+  if (resolvedSchema.allOf && resolvedSchema.allOf.length > 0) {
+    const merged: any = {}
+    resolvedSchema.allOf.forEach((s: any) => {
+      const example = generateExampleFromSchema(s)
+      if (example && typeof example === 'object') {
+        Object.assign(merged, example)
+      }
+    })
+    return Object.keys(merged).length > 0 ? merged : null
+  }
+
+  if (resolvedSchema.oneOf && resolvedSchema.oneOf.length > 0) {
+    return generateExampleFromSchema(resolvedSchema.oneOf[0])
+  }
+
+  if (resolvedSchema.anyOf && resolvedSchema.anyOf.length > 0) {
+    return generateExampleFromSchema(resolvedSchema.anyOf[0])
+  }
+
+  // Handle different types
+  const type = resolvedSchema.type
+
+  if (type === 'object') {
+    const example: any = {}
+    if (resolvedSchema.properties) {
+      Object.keys(resolvedSchema.properties).forEach(key => {
+        const propSchema = resolver.resolve(resolvedSchema.properties[key])
+        const propExample = generateExampleFromSchema(propSchema)
+        if (propExample !== null && propExample !== undefined) {
+          example[key] = propExample
+        }
+      })
+    }
+    return Object.keys(example).length > 0 ? example : null
+  }
+
+  if (type === 'array') {
+    if (resolvedSchema.items) {
+      const itemExample = generateExampleFromSchema(resolvedSchema.items)
+      if (itemExample !== null) {
+        // Generate 2-3 examples for better demonstration
+        return [itemExample, itemExample, itemExample]
+      }
+      return null
+    }
+    return []
+  }
+
+  // Handle primitive types with defaults or examples
+  if (resolvedSchema.default !== undefined) {
+    return resolvedSchema.default
+  }
+
+  if (resolvedSchema.example !== undefined) {
+    return resolvedSchema.example
+  }
+
+  // Generate based on type
+  switch (type) {
+    case 'string':
+      if (resolvedSchema.enum && resolvedSchema.enum.length > 0) {
+        return resolvedSchema.enum[0]
+      }
+      if (resolvedSchema.format === 'email') return 'user@example.com'
+      if (resolvedSchema.format === 'date') return '2024-01-01'
+      if (resolvedSchema.format === 'date-time') return '2024-01-01T00:00:00Z'
+      if (resolvedSchema.format === 'uri') return 'https://example.com'
+      return 'string'
+    case 'number':
+    case 'integer':
+      return 0
+    case 'boolean':
+      return false
+    case 'null':
+      return null
+    default:
+      return null
+  }
+}
+
+// Get example response JSON string (for Response format)
+const getResponseExampleJson = (schema: any): string => {
+  try {
+    const example = generateExampleFromSchema(schema)
+    if (example === null || example === undefined) {
+      return 'null'
+    }
+    return JSON.stringify(example, null, 2)
+  } catch (error) {
+    return '{}'
   }
 }
 
@@ -697,9 +827,39 @@ const handleCopySchemaJson = async (code: string, contentType: string, schema: a
   }
 }
 
-// Get copied state for schema JSON
+// Get copied state for schema JSON (Metadata format)
 const getCopiedState = (code: string, contentType: string): boolean => {
   const key = `${code}-${contentType}-json`
   return schemaJsonCopied.value.get(key) || false
+}
+
+// Handle copy response example
+const handleCopyResponseExample = async (code: string, contentType: string, schema: any) => {
+  try {
+    const exampleJson = getResponseExampleJson(schema)
+    await navigator.clipboard.writeText(exampleJson)
+    const key = `${code}-${contentType}-response`
+    responseExampleCopied.value.set(key, true)
+    setTimeout(() => {
+      responseExampleCopied.value.set(key, false)
+    }, 2000)
+    toast({
+      title: 'Copied!',
+      description: 'Response example copied to clipboard',
+    })
+  } catch (error) {
+    console.error('Failed to copy response example:', error)
+    toast({
+      title: 'Copy Failed',
+      description: 'Failed to copy response example to clipboard',
+      variant: 'destructive',
+    })
+  }
+}
+
+// Get copied state for response example
+const getCopiedResponseState = (code: string, contentType: string): boolean => {
+  const key = `${code}-${contentType}-response`
+  return responseExampleCopied.value.get(key) || false
 }
 </script>
