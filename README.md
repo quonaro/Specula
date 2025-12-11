@@ -99,7 +99,6 @@ npm run preview
 The following environment variables are used when building for production:
 
 - `VITE_BASE_PATH` - base path of the application (default `/Specula/` for GitHub Pages)
-- `VITE_WITHOUT_BACKEND` - disable backend checking (default `true` in production)
 - `VITE_EXAMPLE` - show example load button (default `true` in production)
 
 ## Technologies

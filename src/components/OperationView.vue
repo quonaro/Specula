@@ -509,14 +509,16 @@
                   <TabsContent value="body">
                     <ScrollArea class="h-[300px] w-full">
                       <pre class="bg-code-bg border border-code-border rounded-lg p-3 text-xs overflow-x-auto">
-                        {{ typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2) }}
+                        {{ response.data !== undefined && response.data !== null 
+                          ? (typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2))
+                          : '(empty response)' }}
                       </pre>
                     </ScrollArea>
                   </TabsContent>
 
                   <TabsContent value="headers">
                     <ScrollArea class="h-[300px] w-full">
-                      <div class="space-y-2">
+                      <div v-if="response.headers && Object.keys(response.headers).length > 0" class="space-y-2">
                         <div
                           v-for="[key, value] in Object.entries(response.headers)"
                           :key="key"
@@ -527,6 +529,9 @@
                             {{ value as string }}
                           </p>
                         </div>
+                      </div>
+                      <div v-else class="text-sm text-muted-foreground text-center py-8">
+                        No headers
                       </div>
                     </ScrollArea>
                   </TabsContent>
@@ -702,6 +707,7 @@ const availableServers = computed(() => {
 
 // Initialize selected server
 const getInitialServer = (): string => {
+  // Priority: operation servers > spec servers > sourceUrl > current-host
   if (props.operation.servers && props.operation.servers.length > 0) {
     return props.operation.servers[0].url
   }
@@ -714,7 +720,8 @@ const getInitialServer = (): string => {
       return baseUrl
     }
   }
-  return ''
+  // Default to current-host if no servers in OpenAPI
+  return 'current-host'
 }
 
 const selectedServer = ref(getInitialServer())
@@ -777,6 +784,8 @@ const getCurrentServerUrl = (): string => {
 // Handle response from TryItOut
 const handleResponse = (responseData: any) => {
   response.value = responseData
+  // Reset tab to body when new response arrives
+  responseTab.value = 'body'
 }
 
 // Handle copy

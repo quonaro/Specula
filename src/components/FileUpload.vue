@@ -103,7 +103,7 @@
         </div>
 
         <!-- URL Section -->
-        <div v-if="!withoutBackend || showExample">
+        <div>
           <button
             @click="toggleSection('url')"
             class="w-full flex items-center justify-between py-3 text-sm font-medium hover:text-foreground transition-colors text-muted-foreground group"
@@ -676,7 +676,6 @@ const regularCacheSpecs = computed(() => {
 
 
 // Environment variables
-const withoutBackend = computed(() => import.meta.env.VITE_WITHOUT_BACKEND === 'true')
 const showExample = computed(() => import.meta.env.VITE_EXAMPLE === 'true')
 
 // Computed properties

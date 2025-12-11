@@ -9,10 +9,9 @@ import { useBackend } from '@/composables/useBackend'
 const { checkBackend } = useBackend()
 
 onMounted(() => {
-  // Check backend availability on app start (only if not disabled and not in standalone mode)
-  const withoutBackend = import.meta.env.VITE_WITHOUT_BACKEND === 'true'
+  // Check backend availability on app start (only if not in standalone mode)
   const isStandalone = typeof window !== 'undefined' && (window as any).__SPECULA_STANDALONE__ === true
-  if (!withoutBackend && !isStandalone) {
+  if (!isStandalone) {
     checkBackend().catch(() => {
       // Silently fail - backend is optional
     })

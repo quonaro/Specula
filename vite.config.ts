@@ -1,10 +1,14 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
 import path from "path";
 
 export default defineConfig(({ mode }) => {
+  // Load environment variables using Vite's loadEnv
+  // This ensures variables from .env files are properly loaded
+  const env = loadEnv(mode, process.cwd(), '');
+  
   // Get base path from environment variable, default to '/' for development
-  const base = process.env.VITE_BASE_PATH || '/';
+  const base = env.VITE_BASE_PATH || '/';
 
   return {
     base,
@@ -23,9 +27,9 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [vue()],
     // Explicitly define environment variables to ensure they are embedded in the build
+    // Use loadEnv to get values from .env files
     define: {
-      'import.meta.env.VITE_EXAMPLE': JSON.stringify(process.env.VITE_EXAMPLE || 'false'),
-      'import.meta.env.VITE_WITHOUT_BACKEND': JSON.stringify(process.env.VITE_WITHOUT_BACKEND || 'false'),
+      'import.meta.env.VITE_EXAMPLE': JSON.stringify(env.VITE_EXAMPLE || 'false'),
       'import.meta.env.VITE_BASE_PATH': JSON.stringify(base),
     },
     resolve: {

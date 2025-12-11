@@ -4,12 +4,6 @@ import { useBackendStore } from '@/stores/backend'
  * Get backend URL from environment or use default
  */
 function getBackendUrl(): string {
-  // Try to get from environment variable first
-  const envUrl = import.meta.env.VITE_BACKEND_URL
-  if (envUrl) {
-    return envUrl
-  }
-
   // Try to detect from current origin
   const origin = window.location.origin
   const url = new URL(origin)
@@ -28,10 +22,6 @@ function getBackendUrl(): string {
  * Check if backend checking is disabled
  */
 function isBackendDisabled(): boolean {
-  // Check environment variable
-  if (import.meta.env.VITE_WITHOUT_BACKEND === 'true') {
-    return true
-  }
   // Check standalone mode flag
   if (typeof window !== 'undefined' && (window as any).__SPECULA_STANDALONE__ === true) {
     return true

@@ -129,21 +129,23 @@
       </div>
     </template>
 
-    <!-- Execute Button -->
+    <!-- Execute/Cancel Button -->
     <Button
-      @click="handleExecute"
-      :disabled="isExecuting"
+      @click="isExecuting ? handleCancel() : handleExecute()"
+      :disabled="false"
+      :variant="isExecuting ? 'destructive' : 'default'"
       class="w-full"
     >
-      <Play class="w-4 h-4 mr-2" />
-      {{ isExecuting ? 'Executing...' : 'Execute' }}
+      <X v-if="isExecuting" class="w-4 h-4 mr-2" />
+      <Play v-else class="w-4 h-4 mr-2" />
+      {{ isExecuting ? 'Cancel' : 'Execute' }}
     </Button>
   </Card>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { Play, Copy, Check, Settings } from 'lucide-vue-next'
+import { Play, Copy, Check, Settings, X } from 'lucide-vue-next'
 import Card from './ui/Card.vue'
 import Button from './ui/Button.vue'
 import Input from './ui/Input.vue'
@@ -172,6 +174,7 @@ const emit = defineEmits<{
 const { toast } = useToast()
 const resolver = new RefResolver(props.spec)
 const isExecuting = ref(false)
+const abortController = ref<AbortController | null>(null)
 const response = ref<any>(null)
 const paramValues = ref<Record<string, string>>({})
 const paramFileValues = ref<Record<string, File>>({})
@@ -752,9 +755,24 @@ const handleCopyCommand = (command: string) => {
   })
 }
 
+const handleCancel = () => {
+  if (abortController.value) {
+    abortController.value.abort()
+    abortController.value = null
+  }
+  isExecuting.value = false
+  toast({
+    title: 'Request Cancelled',
+    description: 'The request has been cancelled',
+  })
+}
+
 const handleExecute = async () => {
   isExecuting.value = true
   response.value = null
+  
+  // Create new AbortController for this request
+  abortController.value = new AbortController()
 
   try {
     const serverUrl = props.serverUrl || ''
@@ -904,6 +922,7 @@ const handleExecute = async () => {
     const options: RequestInit = {
       method: props.method.toUpperCase(),
       headers,
+      signal: abortController.value.signal,
     }
 
     if (body !== undefined) {
@@ -944,6 +963,13 @@ const handleExecute = async () => {
       description: `Request completed in ${duration}ms`,
     })
   } catch (error: any) {
+    // Don't show error if request was aborted
+    if (error.name === 'AbortError') {
+      isExecuting.value = false
+      abortController.value = null
+      return
+    }
+    
     const serverUrl = props.serverUrl || ''
     response.value = {
       error: true,
@@ -960,6 +986,7 @@ const handleExecute = async () => {
     })
   } finally {
     isExecuting.value = false
+    abortController.value = null
   }
 }
 
