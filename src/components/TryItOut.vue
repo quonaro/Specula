@@ -980,6 +980,7 @@ const handleExecute = async () => {
     }
 
     response.value = responsePayload
+    // Emit response to parent component
     emit('response', responsePayload)
 
     toast({

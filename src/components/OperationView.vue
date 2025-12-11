@@ -613,9 +613,21 @@ const getCurrentServerUrl = (): string => {
 
 // Handle response from TryItOut
 const handleResponse = (responseData: any) => {
-  response.value = responseData
-  // Reset tab to body when new response arrives
-  responseTab.value = 'body'
+  // Ensure response is properly set
+  if (responseData) {
+    response.value = {
+      status: responseData.status,
+      statusText: responseData.statusText,
+      headers: responseData.headers || {},
+      data: responseData.data,
+      duration: responseData.duration,
+      url: responseData.url,
+      error: responseData.error || false,
+      message: responseData.message
+    }
+    // Reset tab to body when new response arrives
+    responseTab.value = 'body'
+  }
 }
 
 // Handle copy
