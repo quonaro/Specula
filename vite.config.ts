@@ -1,12 +1,13 @@
 import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
+import vueDevtools from "vite-plugin-vue-devtools";
 import path from "path";
 
 export default defineConfig(({ mode }) => {
   // Load environment variables using Vite's loadEnv
   // This ensures variables from .env files are properly loaded
   const env = loadEnv(mode, process.cwd(), '');
-  
+
   // Get base path from environment variable, default to '/' for development
   const base = env.VITE_BASE_PATH || '/';
 
@@ -25,7 +26,11 @@ export default defineConfig(({ mode }) => {
       port: 8080,
       host: "::",
     },
-    plugins: [vue()],
+    plugins: [
+      vue(),
+      // Vue DevTools - only enabled in development mode
+      ...(mode === 'development' ? [vueDevtools()] : []),
+    ],
     // Explicitly define environment variables to ensure they are embedded in the build
     // Use loadEnv to get values from .env files
     define: {
@@ -80,7 +85,7 @@ export default defineConfig(({ mode }) => {
           chunkFileNames: 'assets/js/[name]-[hash].js',
           entryFileNames: 'assets/js/[name]-[hash].js',
           assetFileNames: (assetInfo) => {
-            const info = assetInfo.name.split('.')
+            const info = assetInfo.name?.split('.') || []
             const ext = info[info.length - 1]
             if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
               return `assets/images/[name]-[hash][extname]`
