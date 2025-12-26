@@ -85,6 +85,7 @@ import ScrollArea from './ui/ScrollArea.vue'
 import { useRequestHistoryStore, type RequestHistoryItem } from '@/stores/requestHistory'
 import { useSpecStore } from '@/stores/spec'
 import { getMethodColorClass } from '@/utils/operation-cache'
+import { storeToRefs } from 'pinia'
 
 interface Props {
   selectedItem?: RequestHistoryItem | null
@@ -97,6 +98,7 @@ const emit = defineEmits<{
 }>()
 
 const historyStore = useRequestHistoryStore()
+const { history: historyRef } = storeToRefs(historyStore)
 const specStore = useSpecStore()
 
 const filtersExpanded = ref(false)
@@ -108,15 +110,35 @@ const availableMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
 
 const availableSpecs = computed(() => {
   const specs = new Set<string>()
-  historyStore.history.forEach(item => {
-    if (item.specTitle) {
-      specs.add(item.specTitle)
-    }
-  })
+  const history = historyRef.value
+  if (Array.isArray(history)) {
+    history.forEach(item => {
+      if (item.specTitle) {
+        specs.add(item.specTitle)
+      }
+    })
+  }
   return Array.from(specs)
 })
 
-const stats = computed(() => historyStore.getStatistics().value)
+// Calculate stats based on filtered history, not all history
+const stats = computed(() => {
+  const filtered = filteredHistory.value
+  const total = filtered.length
+  const successful = filtered.filter(item => !item.error && item.status && item.status >= 200 && item.status < 300).length
+  const errors = filtered.filter(item => item.error || (item.status && item.status >= 400)).length
+  const avgDuration = filtered
+    .filter(item => item.duration !== undefined)
+    .reduce((sum, item) => sum + (item.duration || 0), 0) / 
+    filtered.filter(item => item.duration !== undefined).length || 0
+
+  return {
+    total,
+    successful,
+    errors,
+    avgDuration: Math.round(avgDuration),
+  }
+})
 
 const filteredHistory = computed(() => {
   const filters: {
@@ -145,6 +167,12 @@ const filteredHistory = computed(() => {
     filters.specTitle = specFilter.value
   }
 
+  // Ensure history is available
+  const history = historyRef.value
+  
+  if (!Array.isArray(history)) {
+    return []
+  }
 
   let filtered = historyStore.getFilteredHistory(filters).value
 
@@ -211,9 +239,17 @@ const handleClearAll = () => {
 }
 
 // Expose filtered history and stats for parent component
+// Note: computed refs need to be accessed with .value when exposed
 defineExpose({
-  filteredHistory,
-  stats
+  get filteredHistory() {
+    return filteredHistory.value
+  },
+  get stats() {
+    return stats.value
+  },
+  // Also expose the computed refs themselves for direct access
+  filteredHistoryRef: filteredHistory,
+  statsRef: stats
 })
 </script>
 

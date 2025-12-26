@@ -26,7 +26,9 @@ export const useRequestHistoryStore = defineStore('requestHistory', () => {
 
   // Load history from localStorage on initialization
   const loadHistory = () => {
-    if (typeof localStorage === 'undefined') return
+    if (typeof localStorage === 'undefined') {
+      return
+    }
     
     try {
       const saved = localStorage.getItem('requestHistory')
@@ -37,6 +39,8 @@ export const useRequestHistoryStore = defineStore('requestHistory', () => {
         if (history.value.length > MAX_HISTORY_SIZE) {
           history.value = history.value.slice(-MAX_HISTORY_SIZE)
         }
+      } else {
+        history.value = []
       }
     } catch (error) {
       console.error('Failed to load request history:', error)
@@ -184,7 +188,7 @@ export const useRequestHistoryStore = defineStore('requestHistory', () => {
   loadHistory()
 
   return {
-    history: computed(() => history.value),
+    history, // Export ref directly - Pinia will make it reactive
     addRequest,
     removeRequest,
     clearHistory,

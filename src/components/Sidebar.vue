@@ -105,7 +105,7 @@
     <ScrollArea v-if="viewMode === 'history'" class="flex-1">
       <div class="p-2 space-y-1">
         <div v-if="filteredHistory.length === 0" class="p-4 text-center text-sm text-muted-foreground">
-          <p v-if="historyStore.history.length === 0">No requests yet</p>
+          <p v-if="!historyRef || historyRef.length === 0">No requests yet</p>
           <p v-else>No requests match the filters</p>
         </div>
         <div
@@ -251,6 +251,7 @@ const historyViewRef = ref<InstanceType<typeof RequestHistoryView> | null>(null)
 const specStore = useSpecStore()
 const { specs } = storeToRefs(specStore)
 const historyStore = useRequestHistoryStore()
+const { history: historyRef } = storeToRefs(historyStore)
 
 const availableMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
 
@@ -359,18 +360,55 @@ const handleHistorySelect = (item: RequestHistoryItem) => {
 
 const filteredHistory = computed(() => {
   // Get filtered history from RequestHistoryView if available
-  if (historyViewRef.value?.filteredHistory) {
-    return historyViewRef.value.filteredHistory.value
+  // Try both direct access and computed ref access
+  const historyView = historyViewRef.value
+  if (historyView) {
+    // Try accessing as computed ref first
+    let filtered: any = null
+    if (historyView.filteredHistoryRef && typeof historyView.filteredHistoryRef === 'object' && 'value' in historyView.filteredHistoryRef) {
+      filtered = historyView.filteredHistoryRef.value
+    } else if (typeof historyView.filteredHistory !== 'undefined') {
+      // Try direct access (getter)
+      filtered = historyView.filteredHistory
+    }
+    
+    if (filtered !== null) {
+      // Ensure we always return an array
+      if (Array.isArray(filtered)) {
+        return filtered
+      }
+    }
   }
+  
   // Fallback: return all history sorted by timestamp
-  return [...historyStore.history].sort((a, b) => b.timestamp - a.timestamp)
+  const history = historyRef.value
+  
+  if (!Array.isArray(history)) {
+    return []
+  }
+  
+  return [...history].sort((a, b) => b.timestamp - a.timestamp)
 })
 
 const historyStats = computed(() => {
+  const historyView = historyViewRef.value
+  
   // Get stats from RequestHistoryView if available
-  if (historyViewRef.value?.stats) {
-    return historyViewRef.value.stats.value
+  if (historyView) {
+    // Try accessing as computed ref first
+    let stats: any = null
+    if (historyView.statsRef && typeof historyView.statsRef === 'object' && 'value' in historyView.statsRef) {
+      stats = historyView.statsRef.value
+    } else if (typeof historyView.stats !== 'undefined') {
+      // Try direct access (getter)
+      stats = historyView.stats
+    }
+    
+    if (stats !== null) {
+      return stats
+    }
   }
+  
   // Fallback: get stats from store
   return historyStore.getStatistics().value
 })
