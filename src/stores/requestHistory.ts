@@ -90,6 +90,15 @@ export const useRequestHistoryStore = defineStore('requestHistory', () => {
     saveHistory()
   }
 
+  // Clear history older than specified timestamp
+  const clearHistoryOlderThan = (timestamp: number) => {
+    const beforeLength = history.value.length
+    history.value = history.value.filter(item => item.timestamp >= timestamp)
+    if (history.value.length !== beforeLength) {
+      saveHistory()
+    }
+  }
+
   // Get history filtered by criteria
   const getFilteredHistory = (filters: {
     method?: string
@@ -179,6 +188,7 @@ export const useRequestHistoryStore = defineStore('requestHistory', () => {
     addRequest,
     removeRequest,
     clearHistory,
+    clearHistoryOlderThan,
     getFilteredHistory,
     getRequestById,
     getRecentRequests,

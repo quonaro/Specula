@@ -28,7 +28,7 @@
                   class="border-b pb-3 last:border-b-0"
                 >
                   <div class="flex items-center gap-2 mb-2">
-                    <Badge :class="`${getMethodColorClass(op.method)} text-white`">
+                    <Badge variant="none" :class="`${getMethodColorClass(op.method)} text-white`">
                       {{ op.method.toUpperCase() }}
                     </Badge>
                     <span class="text-sm">{{ op.operation.summary || 'Callback operation' }}</span>
@@ -60,7 +60,7 @@
                       class="p-3"
                     >
                       <div class="flex items-center gap-2 mb-2">
-                        <Badge variant="outline">{{ statusCode }}</Badge>
+                        <Badge variant="none" :class="`${getStatusColorClass(statusCode)} text-white font-bold`">{{ statusCode }}</Badge>
                         <span class="text-sm">{{ resolver.resolve(response).description }}</span>
                       </div>
                       <div
@@ -92,7 +92,7 @@
 import { computed } from 'vue'
 import type { Callback, PathItem, Operation } from '@/types/openapi'
 import { RefResolver } from '@/utils/ref-resolver'
-import { getMethodColorClass } from '@/utils/operation-cache'
+import { getMethodColorClass, getStatusColorClass } from '@/utils/operation-cache'
 import Card from './ui/Card.vue'
 import Badge from './ui/Badge.vue'
 import Accordion from './ui/Accordion.vue'

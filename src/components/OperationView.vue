@@ -3,7 +3,7 @@
     <!-- Header (Common for both columns) -->
     <div class="p-8 pb-4 space-y-3 flex-shrink-0">
       <div class="flex items-center gap-3">
-        <Badge :class="`${getMethodColorClass(method)} text-white font-bold px-3 py-1`">
+        <Badge variant="none" :class="`${getMethodColorClass(method)} text-white font-bold px-3 py-1`">
           {{ method }}
         </Badge>
         <code class="text-lg font-mono text-foreground" :title="path">{{ path }}</code>
@@ -141,7 +141,7 @@
                 <div v-for="[code, response] in Object.entries(operation.responses)" :key="code"
                   class="border border-border rounded-lg p-4 space-y-3">
                   <div class="flex items-center gap-2">
-                    <Badge :variant="code.startsWith('2') ? 'default' : 'destructive'">
+                    <Badge variant="none" :class="`${getStatusColorClass(code)} text-white font-bold`">
                       {{ code }}
                     </Badge>
                     <span class="text-sm text-foreground">
@@ -342,7 +342,7 @@
               <div class="flex items-center gap-2">
                 <FileText class="w-5 h-5 text-primary" />
                 <h3 class="text-lg font-semibold text-foreground">Response</h3>
-                <Badge v-if="response?.status" variant="outline" class="text-sm">
+                <Badge v-if="response?.status" variant="none" :class="`${getStatusColorClass(response.status)} text-white font-bold text-sm`">
                   {{ response.status }}
                 </Badge>
               </div>
@@ -367,7 +367,7 @@ import { Copy, Check, Key, Server, FileText, Settings } from 'lucide-vue-next'
 import type { Operation, OpenAPISpec, PathItem, MediaType, Encoding } from '@/types/openapi'
 import { RefResolver } from '@/utils/ref-resolver'
 import { isOperationPrivate, getOperationSecurity } from '@/utils/openapi-parser'
-import { getMethodColorClass } from '@/utils/operation-cache'
+import { getMethodColorClass, getStatusColorClass } from '@/utils/operation-cache'
 import { useAuthorizationStore } from '@/stores/authorization'
 import { useToast } from '@/composables/useToast'
 import Badge from './ui/Badge.vue'

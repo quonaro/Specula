@@ -61,12 +61,14 @@
             <Input :model-value="paramValues[resolver.resolve(param).name] || ''"
             @update:model-value="(val: string) => updateParamValue(resolver.resolve(param).name, val)"
               :placeholder="`Enter ${resolver.resolve(param).name}`" class="flex-1" />
-            <label class="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
-              <input type="checkbox" :checked="rememberParam[resolver.resolve(param).name] || false"
-                @change="toggleRememberParam(resolver.resolve(param).name)"
-                class="w-3.5 h-3.5 rounded border-border text-primary focus:ring-primary" />
+            <Checkbox
+              :model-value="rememberParam[resolver.resolve(param).name] || false"
+              @update:model-value="(checked) => toggleRememberParam(resolver.resolve(param).name, checked)"
+              label-class-name="whitespace-nowrap"
+              text-class-name="text-xs text-muted-foreground"
+            >
               Remember
-            </label>
+            </Checkbox>
           </div>
         </div>
       </div>
@@ -75,12 +77,14 @@
       <div v-if="hasRequestBody" class="space-y-2">
         <div class="flex items-center justify-between">
         <h4 class="text-sm font-semibold">Request Body</h4>
-          <label v-if="!isRequestBodyFile"
-            class="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-            <input type="checkbox" :checked="rememberBody" @change="toggleRememberBody"
-              class="w-3.5 h-3.5 rounded border-border text-primary focus:ring-primary" />
+          <Checkbox
+            v-if="!isRequestBodyFile"
+            :model-value="rememberBody"
+            @update:model-value="toggleRememberBody"
+            text-class-name="text-xs text-muted-foreground"
+          >
             Remember
-          </label>
+          </Checkbox>
         </div>
         <!-- File upload for binary/multipart request body -->
         <div v-if="isRequestBodyFile" class="space-y-2">
@@ -91,8 +95,16 @@
           </p>
         </div>
         <!-- JSON textarea for JSON request body -->
-        <Textarea v-else :model-value="requestBody" @update:model-value="requestBody = $event"
-          placeholder="Enter JSON request body" class="font-mono text-xs min-h-[150px]" />
+        <Textarea 
+          v-else 
+          ref="requestBodyTextarea"
+          :model-value="requestBody" 
+          @update:model-value="requestBody = $event"
+          @input="adjustTextareaHeight"
+          placeholder="Enter JSON request body" 
+          class="font-mono text-xs resize-none overflow-hidden" 
+          style="min-height: 80px;"
+        />
       </div>
     </template>
 
@@ -121,13 +133,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Play, Copy, Check, Settings, X } from 'lucide-vue-next'
 import Card from './ui/Card.vue'
 import Button from './ui/Button.vue'
 import Input from './ui/Input.vue'
 import Textarea from './ui/Textarea.vue'
 import Badge from './ui/Badge.vue'
+import Checkbox from './ui/Checkbox.vue'
 import { useToast } from '@/composables/useToast'
 import type { Operation, OpenAPISpec, PathItem, SecurityScheme } from '@/types/openapi'
 import { RefResolver } from '@/utils/ref-resolver'
@@ -170,6 +183,7 @@ const paramValues = ref<Record<string, string>>({})
 const paramFileValues = ref<Record<string, File>>({})
 const requestBody = ref('{}')
 const requestBodyFile = ref<File | null>(null)
+const requestBodyTextarea = ref<HTMLTextAreaElement | null>(null)
 const commandFormat = ref<'edit' | 'curl' | 'wget'>('edit')
 const commandCopied = ref(false)
 
@@ -366,7 +380,7 @@ const saveParamValue = (name: string, value: string) => {
 }
 
 // Load saved request body from localStorage
-const loadSavedRequestBody = () => {
+const loadSavedRequestBody = async () => {
   try {
     const key = getOperationStorageKey()
     const saved = localStorage.getItem(`${key}-body`)
@@ -375,6 +389,9 @@ const loadSavedRequestBody = () => {
     if (saved && rememberSaved === 'true') {
       requestBody.value = saved
       rememberBody.value = true
+      // Adjust height after loading saved body
+      await nextTick()
+      adjustTextareaHeight()
     }
   } catch (error) {
     console.error('Failed to load saved request body:', error)
@@ -404,8 +421,8 @@ const saveRequestBody = () => {
 }
 
 // Toggle remember for parameter
-const toggleRememberParam = (name: string) => {
-  rememberParam.value = { ...rememberParam.value, [name]: !rememberParam.value[name] }
+const toggleRememberParam = (name: string, checked: boolean) => {
+  rememberParam.value = { ...rememberParam.value, [name]: checked }
 
   // Save remember states
   try {
@@ -413,7 +430,7 @@ const toggleRememberParam = (name: string) => {
     localStorage.setItem(`${key}-remember`, JSON.stringify(rememberParam.value))
 
     // If unchecking, remove saved value
-    if (!rememberParam.value[name]) {
+    if (!checked) {
       const saved = localStorage.getItem(`${key}-params`) || '{}'
       const parsed = JSON.parse(saved)
       delete parsed[name]
@@ -428,8 +445,8 @@ const toggleRememberParam = (name: string) => {
 }
 
 // Toggle remember for body
-const toggleRememberBody = () => {
-  rememberBody.value = !rememberBody.value
+const toggleRememberBody = (checked: boolean) => {
+  rememberBody.value = checked
   saveRequestBody()
 }
 
@@ -574,24 +591,49 @@ const handleRequestBodyFileChange = (event: Event) => {
   }
 }
 
+// Adjust textarea height to fit content
+const adjustTextareaHeight = () => {
+  if (requestBodyTextarea.value) {
+    // Get the textarea element from the exposed ref
+    const textarea = (requestBodyTextarea.value as any)?.textarea?.value || 
+                     (requestBodyTextarea.value as any)?.textarea ||
+                     requestBodyTextarea.value
+    
+    if (textarea && textarea instanceof HTMLTextAreaElement) {
+      // Reset height to auto to get correct scrollHeight
+      textarea.style.height = 'auto'
+      // Set height to scrollHeight to fit content (min 80px from component default)
+      const minHeight = 80
+      const newHeight = Math.max(textarea.scrollHeight, minHeight)
+      textarea.style.height = `${newHeight}px`
+    }
+  }
+}
+
 // Watch requestBody changes and save if remember is checked
-watch(requestBody, () => {
+watch(requestBody, async () => {
   if (!isRequestBodyFile.value) {
     saveRequestBody()
+    // Adjust height after content changes
+    await nextTick()
+    adjustTextareaHeight()
   }
 })
 
 // Initialize requestBody with example when component mounts or operation changes
-const initializeRequestBody = () => {
+const initializeRequestBody = async () => {
   if (hasRequestBody.value) {
     const example = getRequestBodyExample()
     requestBody.value = example
+    // Adjust height after initialization
+    await nextTick()
+    adjustTextareaHeight()
   }
 }
 
 // Watch for operation changes and reinitialize
-watch(() => [props.operation, props.path, props.method], () => {
-  initializeRequestBody()
+watch(() => [props.operation, props.path, props.method], async () => {
+  await initializeRequestBody()
   // Clear file values when operation changes
   paramFileValues.value = {}
   requestBodyFile.value = null
@@ -602,14 +644,25 @@ watch(() => [props.operation, props.path, props.method], () => {
   paramValues.value = {}
   // Load saved values
   loadSavedParamValues()
-  loadSavedRequestBody()
+  await loadSavedRequestBody()
 }, { immediate: false, deep: false })
 
 // Initialize on mount
-onMounted(() => {
-  initializeRequestBody()
+onMounted(async () => {
+  await initializeRequestBody()
   loadSavedParamValues()
-  loadSavedRequestBody()
+  await loadSavedRequestBody()
+  // Adjust height after everything is loaded
+  await nextTick()
+  adjustTextareaHeight()
+  
+  // Listen for window resize to adjust textarea height
+  window.addEventListener('resize', adjustTextareaHeight)
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  window.removeEventListener('resize', adjustTextareaHeight)
 })
 
 // Build request URL with path and query parameters (with variable resolution)

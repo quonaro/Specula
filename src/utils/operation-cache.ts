@@ -28,6 +28,27 @@ export function getMethodColorClass(method: string): string {
 }
 
 /**
+ * Get status code color class for Tailwind CSS
+ * Returns appropriate color based on HTTP status code
+ */
+export function getStatusColorClass(status: number | string): string {
+  const statusNum = typeof status === 'string' ? parseInt(status, 10) : status
+  if (isNaN(statusNum)) return 'bg-muted'
+  
+  if (statusNum >= 200 && statusNum < 300) {
+    return 'bg-status-2xx'
+  } else if (statusNum >= 300 && statusNum < 400) {
+    return 'bg-status-3xx'
+  } else if (statusNum >= 400 && statusNum < 500) {
+    return 'bg-status-4xx'
+  } else if (statusNum >= 500) {
+    return 'bg-status-5xx'
+  }
+  
+  return 'bg-muted'
+}
+
+/**
  * Check if an operation is private (requires authentication)
  * Uses caching to avoid repeated lookups
  */

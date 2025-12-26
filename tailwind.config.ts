@@ -67,6 +67,12 @@ export default {
           head: "hsl(var(--method-head))",
           trace: "hsl(var(--method-trace))",
         },
+        status: {
+          "2xx": "hsl(var(--status-2xx))",
+          "3xx": "hsl(var(--status-3xx))",
+          "4xx": "hsl(var(--status-4xx))",
+          "5xx": "hsl(var(--status-5xx))",
+        },
         code: {
           bg: "hsl(var(--code-bg))",
           border: "hsl(var(--code-border))",

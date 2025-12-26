@@ -9,8 +9,13 @@
   </div>
 
   <div v-else class="flex h-screen w-full bg-background" @click="handleClickOutsideSearch">
-    <Sidebar :root="tagTree" :selected-operation="selectedOperation" @operation-select="handleOperationSelect"
-      @group-select="handleGroupSelect" />
+    <Sidebar 
+      :root="tagTree" 
+      :selected-operation="selectedOperation" 
+      @operation-select="handleOperationSelect"
+      @group-select="handleGroupSelect"
+      @history-select="handleHistorySelect"
+    />
 
     <div class="flex-1 flex flex-col h-screen">
       <header class="border-b border-border bg-card">
@@ -68,11 +73,6 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <a v-if="isExampleMode" href="https://github.com/quonaro/Specula" target="_blank" rel="noopener noreferrer"
-              class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-9 px-3 border border-input bg-background hover:bg-accent hover:text-accent-foreground">
-              <Github class="h-4 w-4" />
-              GitHub
-            </a>
             <Button v-if="hasSecuritySchemes" variant="outline" size="sm" @click="handleAuthorizationClick">
               <Key class="h-4 w-4 mr-2" />
               Authorization
@@ -185,6 +185,7 @@ import { useSpecCacheStore, isHash } from '@/stores/specCache'
 import { useSpecHistoryStore } from '@/stores/specHistory'
 import { useLastWorkspaceStore } from '@/stores/lastWorkspace'
 import type { OpenAPISpec, TagNode, Operation } from '@/types/openapi'
+import type { RequestHistoryItem } from '@/stores/requestHistory'
 import { parseOpenAPISpec, parseMultipleSpecs, findNodeByPath, findNodeBySlug, toSlug, endpointPathToSlug, slugToEndpointPath, getOperationId, findOperationById } from '@/utils/openapi-parser'
 import { clearOperationCaches } from '@/utils/operation-cache'
 import { searchAllOperations, type SearchResult } from '@/utils/search'
@@ -837,6 +838,48 @@ const handleClickOutsideSearch = (event: MouseEvent) => {
   const target = event.target as HTMLElement
   if (!target.closest('.global-search-container')) {
     showGlobalSearchResults.value = false
+  }
+}
+
+const handleHistorySelect = (item: RequestHistoryItem) => {
+  // Navigate to the endpoint from history
+  if (item.path && item.method) {
+    // Extract path from URL if needed (remove query params and base URL)
+    let path = item.path
+    
+    // If path starts with http, extract the pathname
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      try {
+        const url = new URL(path)
+        path = url.pathname
+      } catch (e) {
+        // If URL parsing fails, try to extract path manually
+        const match = path.match(/https?:\/\/[^\/]+(\/.*?)(?:\?|$)/)
+        if (match) {
+          path = match[1]
+        }
+      }
+    }
+    
+    // Remove query parameters if present
+    if (path.includes('?')) {
+      path = path.split('?')[0]
+    }
+    
+    // Try to find operation by operationId first (more reliable)
+    if (item.operationId) {
+      const found = findOperationById(specStore.specs, item.operationId)
+      if (found && found.method === item.method.toUpperCase()) {
+        handleOperationSelect(found.method, found.path)
+        return
+      }
+    }
+    
+    // Fallback: try to find by path and method
+    handleOperationSelect(item.method, path)
+    
+    // TODO: In the future, we can restore request parameters and body from history
+    // This would require passing the history item to OperationView component
   }
 }
 

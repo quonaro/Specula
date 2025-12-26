@@ -14,7 +14,7 @@
                 'relative px-3 py-3 rounded-lg border-2 transition-all overflow-hidden group',
                 themeStore.theme === 'system'
                   ? 'border-primary bg-primary/10 shadow-sm scale-[1.02]'
-                  : 'border-border bg-background hover:border-primary/50 hover:bg-accent/50'
+                  : 'border-border bg-background hover:border-primary/50'
               ]"
               @click="themeStore.setTheme('system')"
               @mouseenter="handleThemePreview('system')"
@@ -28,10 +28,27 @@
               <div class="relative z-10">
                 <!-- Color Preview -->
                 <div class="flex gap-1 mb-2">
-                  <div class="h-3 w-3 rounded-full bg-background border border-border"></div>
-                  <div class="h-3 w-3 rounded-full bg-card border border-border"></div>
-                  <div class="h-3 w-3 rounded-full bg-muted border border-border"></div>
-                  <div class="h-3 w-3 rounded-full bg-primary"></div>
+                  <div 
+                    class="h-3 w-3 rounded-full border" 
+                    :style="{ 
+                      backgroundColor: getThemeColors('system').background,
+                      borderColor: getThemeColors('system').border
+                    }"
+                  ></div>
+                  <div 
+                    class="h-3 w-3 rounded-full border" 
+                    :style="{ 
+                      backgroundColor: getThemeColors('system').card,
+                      borderColor: getThemeColors('system').border
+                    }"
+                  ></div>
+                  <div 
+                    class="h-3 w-3 rounded-full border" 
+                    :style="{ 
+                      backgroundColor: getThemeColors('system').muted,
+                      borderColor: getThemeColors('system').border
+                    }"
+                  ></div>
                 </div>
                 <div class="text-xs font-medium">System</div>
                 <div class="text-[10px] text-muted-foreground mt-0.5">Follow system</div>
@@ -51,7 +68,7 @@
                 'relative px-3 py-3 rounded-lg border-2 transition-all overflow-hidden group',
                 themeStore.theme === theme.id
                   ? 'border-primary bg-primary/10 shadow-sm scale-[1.02]'
-                  : 'border-border bg-background hover:border-primary/50 hover:bg-accent/50'
+                  : 'border-border bg-background hover:border-primary/50'
               ]"
               @click="themeStore.setTheme(theme.id)"
               @mouseenter="handleThemePreview(theme.id)"
@@ -65,10 +82,27 @@
               <div class="relative z-10">
                 <!-- Color Preview -->
                 <div class="flex gap-1 mb-2">
-                  <div class="h-3 w-3 rounded-full bg-background border border-border"></div>
-                  <div class="h-3 w-3 rounded-full bg-card border border-border"></div>
-                  <div class="h-3 w-3 rounded-full bg-muted border border-border"></div>
-                  <div class="h-3 w-3 rounded-full bg-primary"></div>
+                  <div 
+                    class="h-3 w-3 rounded-full border" 
+                    :style="{ 
+                      backgroundColor: getThemeColors(theme.id).background,
+                      borderColor: getThemeColors(theme.id).border
+                    }"
+                  ></div>
+                  <div 
+                    class="h-3 w-3 rounded-full border" 
+                    :style="{ 
+                      backgroundColor: getThemeColors(theme.id).card,
+                      borderColor: getThemeColors(theme.id).border
+                    }"
+                  ></div>
+                  <div 
+                    class="h-3 w-3 rounded-full border" 
+                    :style="{ 
+                      backgroundColor: getThemeColors(theme.id).muted,
+                      borderColor: getThemeColors(theme.id).border
+                    }"
+                  ></div>
                 </div>
                 <div class="text-xs font-medium">{{ theme.name }}</div>
                 <div class="text-[10px] text-muted-foreground mt-0.5">{{ theme.description }}</div>
@@ -88,7 +122,7 @@
                 'relative px-3 py-3 rounded-lg border-2 transition-all overflow-hidden group',
                 themeStore.theme === theme.id
                   ? 'border-primary bg-primary/10 shadow-sm scale-[1.02]'
-                  : 'border-border bg-background hover:border-primary/50 hover:bg-accent/50'
+                  : 'border-border bg-background hover:border-primary/50'
               ]"
               @click="themeStore.setTheme(theme.id)"
               @mouseenter="handleThemePreview(theme.id)"
@@ -102,10 +136,27 @@
               <div class="relative z-10">
                 <!-- Color Preview -->
                 <div class="flex gap-1 mb-2">
-                  <div class="h-3 w-3 rounded-full bg-background border border-border"></div>
-                  <div class="h-3 w-3 rounded-full bg-card border border-border"></div>
-                  <div class="h-3 w-3 rounded-full bg-muted border border-border"></div>
-                  <div class="h-3 w-3 rounded-full bg-primary"></div>
+                  <div 
+                    class="h-3 w-3 rounded-full border" 
+                    :style="{ 
+                      backgroundColor: getThemeColors(theme.id).background,
+                      borderColor: getThemeColors(theme.id).border
+                    }"
+                  ></div>
+                  <div 
+                    class="h-3 w-3 rounded-full border" 
+                    :style="{ 
+                      backgroundColor: getThemeColors(theme.id).card,
+                      borderColor: getThemeColors(theme.id).border
+                    }"
+                  ></div>
+                  <div 
+                    class="h-3 w-3 rounded-full border" 
+                    :style="{ 
+                      backgroundColor: getThemeColors(theme.id).muted,
+                      borderColor: getThemeColors(theme.id).border
+                    }"
+                  ></div>
                 </div>
                 <div class="text-xs font-medium">{{ theme.name }}</div>
                 <div class="text-[10px] text-muted-foreground mt-0.5">{{ theme.description }}</div>
@@ -125,7 +176,7 @@
                 'relative px-3 py-3 rounded-lg border-2 transition-all overflow-hidden group',
                 themeStore.theme === `custom:${customTheme.id}`
                   ? 'border-primary bg-primary/10 shadow-sm scale-[1.02]'
-                  : 'border-border bg-background hover:border-primary/50 hover:bg-accent/50'
+                  : 'border-border bg-background hover:border-primary/50'
               ]"
               @click="themeStore.setTheme(`custom:${customTheme.id}`)"
               @mouseenter="handleThemePreview(`custom:${customTheme.id}`)"
@@ -139,10 +190,27 @@
               <div class="relative z-10">
                 <!-- Color Preview -->
                 <div class="flex gap-1 mb-2">
-                  <div class="h-3 w-3 rounded-full bg-background border border-border"></div>
-                  <div class="h-3 w-3 rounded-full bg-card border border-border"></div>
-                  <div class="h-3 w-3 rounded-full bg-muted border border-border"></div>
-                  <div class="h-3 w-3 rounded-full bg-primary"></div>
+                  <div 
+                    class="h-3 w-3 rounded-full border" 
+                    :style="{ 
+                      backgroundColor: getThemeColors(`custom:${customTheme.id}`).background,
+                      borderColor: getThemeColors(`custom:${customTheme.id}`).border
+                    }"
+                  ></div>
+                  <div 
+                    class="h-3 w-3 rounded-full border" 
+                    :style="{ 
+                      backgroundColor: getThemeColors(`custom:${customTheme.id}`).card,
+                      borderColor: getThemeColors(`custom:${customTheme.id}`).border
+                    }"
+                  ></div>
+                  <div 
+                    class="h-3 w-3 rounded-full border" 
+                    :style="{ 
+                      backgroundColor: getThemeColors(`custom:${customTheme.id}`).muted,
+                      borderColor: getThemeColors(`custom:${customTheme.id}`).border
+                    }"
+                  ></div>
                 </div>
                 <div class="text-xs font-medium">{{ customTheme.name }}</div>
                 <div class="text-[10px] text-muted-foreground mt-0.5 truncate">Custom</div>
@@ -242,11 +310,11 @@ const handleThemePreview = (themeId: string | null) => {
     return
   }
 
-  // Set timer for delayed preview (1 second)
+  // Set timer for delayed preview (300ms)
   previewTimer = setTimeout(() => {
     themeStore.previewTheme(themeId)
     previewTimer = null
-  }, 1000)
+  }, 300)
 }
 
 // Cleanup on unmount
@@ -255,6 +323,120 @@ onUnmounted(() => {
     clearTimeout(previewTimer)
   }
 })
+
+// Get theme colors for preview circles
+const getThemeColors = (themeId: string) => {
+  const colors: Record<string, { background: string; card: string; muted: string; primary: string; border: string }> = {
+    'system': {
+      background: 'hsl(0, 0%, 100%)',
+      card: 'hsl(0, 0%, 100%)',
+      muted: 'hsl(220, 13%, 95%)',
+      primary: 'hsl(262, 83%, 58%)',
+      border: 'hsl(220, 13%, 91%)',
+    },
+    'light': {
+      background: 'hsl(0, 0%, 100%)',
+      card: 'hsl(0, 0%, 100%)',
+      muted: 'hsl(220, 13%, 95%)',
+      primary: 'hsl(262, 83%, 58%)',
+      border: 'hsl(220, 13%, 91%)',
+    },
+    'light-1': {
+      background: 'hsl(40, 20%, 98%)',
+      card: 'hsl(40, 15%, 100%)',
+      muted: 'hsl(40, 18%, 94%)',
+      primary: 'hsl(262, 83%, 58%)',
+      border: 'hsl(40, 15%, 88%)',
+    },
+    'light-2': {
+      background: 'hsl(340, 25%, 98%)',
+      card: 'hsl(340, 20%, 100%)',
+      muted: 'hsl(340, 22%, 94%)',
+      primary: 'hsl(262, 83%, 58%)',
+      border: 'hsl(340, 20%, 90%)',
+    },
+    'light-3': {
+      background: 'hsl(210, 30%, 98%)',
+      card: 'hsl(210, 25%, 100%)',
+      muted: 'hsl(210, 28%, 94%)',
+      primary: 'hsl(262, 83%, 58%)',
+      border: 'hsl(210, 25%, 88%)',
+    },
+    'dark': {
+      background: 'hsl(220, 26%, 14%)',
+      card: 'hsl(220, 24%, 18%)',
+      muted: 'hsl(220, 17%, 24%)',
+      primary: 'hsl(262, 83%, 58%)',
+      border: 'hsl(220, 17%, 24%)',
+    },
+    'dark-1': {
+      background: 'hsl(30, 20%, 12%)',
+      card: 'hsl(30, 18%, 16%)',
+      muted: 'hsl(30, 15%, 22%)',
+      primary: 'hsl(262, 83%, 58%)',
+      border: 'hsl(30, 15%, 22%)',
+    },
+    'dark-2': {
+      background: 'hsl(220, 30%, 12%)',
+      card: 'hsl(220, 28%, 16%)',
+      muted: 'hsl(220, 25%, 22%)',
+      primary: 'hsl(262, 83%, 58%)',
+      border: 'hsl(220, 25%, 22%)',
+    },
+    'dark-3': {
+      background: 'hsl(270, 25%, 11%)',
+      card: 'hsl(270, 23%, 15%)',
+      muted: 'hsl(270, 20%, 20%)',
+      primary: 'hsl(262, 83%, 58%)',
+      border: 'hsl(270, 20%, 20%)',
+    },
+    'deepdark': {
+      background: 'hsl(0, 0%, 2%)',
+      card: 'hsl(0, 0%, 5%)',
+      muted: 'hsl(0, 0%, 8%)',
+      primary: 'hsl(262, 83%, 58%)',
+      border: 'hsl(0, 0%, 12%)',
+    },
+  }
+  
+  // For custom themes, try to get colors from CSS variables or use defaults
+  if (themeId.startsWith('custom:')) {
+    // Try to get colors from computed styles if theme is loaded
+    if (typeof document !== 'undefined') {
+      const root = document.documentElement
+      const computedStyle = getComputedStyle(root)
+      try {
+        const bg = computedStyle.getPropertyValue('--background').trim()
+        const card = computedStyle.getPropertyValue('--card').trim()
+        const muted = computedStyle.getPropertyValue('--muted').trim()
+        const primary = computedStyle.getPropertyValue('--primary').trim()
+        const border = computedStyle.getPropertyValue('--border').trim()
+        
+        if (bg && card && muted && primary && border) {
+          return {
+            background: `hsl(${bg})`,
+            card: `hsl(${card})`,
+            muted: `hsl(${muted})`,
+            primary: `hsl(${primary})`,
+            border: `hsl(${border})`,
+          }
+        }
+      } catch (e) {
+        // Fall through to default
+      }
+    }
+    // Default colors for custom themes
+    return {
+      background: 'hsl(0, 0%, 100%)',
+      card: 'hsl(0, 0%, 100%)',
+      muted: 'hsl(220, 13%, 95%)',
+      primary: 'hsl(262, 83%, 58%)',
+      border: 'hsl(220, 13%, 91%)',
+    }
+  }
+  
+  return colors[themeId] || colors['light']
+}
 
 const accentColors = [
   { name: 'purple', light: 'hsl(262, 83%, 58%)', dark: 'hsl(262, 83%, 58%)' },

@@ -7,6 +7,7 @@ import './index.css'
 import App from './App.vue'
 import { useThemeStore } from './stores/theme'
 import { useSettingsStore } from './stores/settings'
+import { useRequestHistoryStore } from './stores/requestHistory'
 // Import logo - will be replaced with Base64 string by vite-plugin-logo-base64 in standalone build
 import logoUrl from '/logo.png'
 
@@ -25,6 +26,7 @@ export interface SpeculaConfig {
   openapi: string | string[]
   base?: string // Base path for routing (e.g., '/docs' for FastAPI integration)
   themes?: Record<string, string> // Custom themes: { "Theme Name": "https://example.com/theme.css" }
+  clearHistoryEvery?: string // Auto-clear history interval: "5m", "10h", "1y", "20s" (default: "5m")
 }
 
 export interface SpeculaInstance {
@@ -156,6 +158,60 @@ export async function init(config: SpeculaConfig): Promise<SpeculaInstance> {
   // Initialize settings before mounting
   const settingsStore = useSettingsStore()
 
+  // Parse time interval string (e.g., "5m", "10h", "1y", "20s")
+  const parseTimeInterval = (interval: string): number => {
+    const match = interval.match(/^(\d+)([smhdwy])$/i)
+    if (!match) {
+      console.warn(`Invalid time interval format: ${interval}. Using default 5m.`)
+      return 5 * 60 * 1000 // 5 minutes default
+    }
+
+    const value = parseInt(match[1], 10)
+    const unit = match[2].toLowerCase()
+
+    const multipliers: Record<string, number> = {
+      s: 1000,           // seconds
+      m: 60 * 1000,      // minutes
+      h: 60 * 60 * 1000, // hours
+      d: 24 * 60 * 60 * 1000, // days
+      w: 7 * 24 * 60 * 60 * 1000, // weeks
+      y: 365 * 24 * 60 * 60 * 1000, // years
+    }
+
+    return value * (multipliers[unit] || 5 * 60 * 1000)
+  }
+
+  // Setup automatic history clearing if configured
+  // Note: historyStore must be accessed after app.use(pinia)
+  const clearHistoryInterval = config.clearHistoryEvery || '5m'
+  const intervalMs = parseTimeInterval(clearHistoryInterval)
+  
+  // Store cleanup interval ID for later cleanup
+  let historyCleanupInterval: ReturnType<typeof setInterval> | null = null
+  
+  if (intervalMs > 0) {
+    // Initialize history store after pinia is set up
+    const historyStore = useRequestHistoryStore()
+    
+    // Function to clear old history
+    const clearOldHistory = () => {
+      const cutoffTime = Date.now() - intervalMs
+      historyStore.clearHistoryOlderThan(cutoffTime)
+    }
+
+    // Clear old history immediately on init
+    clearOldHistory()
+
+    // Set up interval to clear old history periodically
+    // Check at least every minute, or more frequently if interval is shorter
+    historyCleanupInterval = setInterval(() => {
+      clearOldHistory()
+    }, Math.min(intervalMs, 60 * 1000))
+
+    // Store interval ID for cleanup on destroy
+    ;(window as any)[`__SPECULA_HISTORY_CLEANUP_${containerId}`] = historyCleanupInterval
+  }
+
   app.use(Toast, {
     position: 'top-right',
     timeout: 5000,
@@ -181,6 +237,13 @@ export async function init(config: SpeculaConfig): Promise<SpeculaInstance> {
   app.mount(`#${containerId}`)
 
   const destroy = () => {
+    // Clear history cleanup interval if it exists
+    const cleanupInterval = (window as any)[`__SPECULA_HISTORY_CLEANUP_${containerId}`]
+    if (cleanupInterval) {
+      clearInterval(cleanupInterval)
+      delete (window as any)[`__SPECULA_HISTORY_CLEANUP_${containerId}`]
+    }
+    
     app.unmount()
     appContainer.remove()
   }

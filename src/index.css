@@ -57,6 +57,12 @@ All colors MUST be HSL.
     --method-head: 199 89% 48%;
     --method-trace: 330 81% 60%;
 
+    /* HTTP Status Code Colors */
+    --status-2xx: 142 76% 36%; /* Green for success */
+    --status-3xx: 40 90% 50%; /* Yellow/Orange for redirect */
+    --status-4xx: 0 84% 60%; /* Red for client error */
+    --status-5xx: 0 72% 51%; /* Dark red for server error */
+
     /* Code background */
     --code-bg: 220 13% 97%;
     --code-border: 220 13% 91%;
@@ -109,6 +115,11 @@ All colors MUST be HSL.
     --method-options: 215 20% 65%;
     --method-head: 199 89% 58%;
     --method-trace: 330 81% 70%;
+    /* HTTP Status Code Colors */
+    --status-2xx: 142 76% 46%; /* Green for success */
+    --status-3xx: 40 90% 60%; /* Yellow/Orange for redirect */
+    --status-4xx: 0 84% 70%; /* Red for client error */
+    --status-5xx: 0 72% 61%; /* Dark red for server error */
 
     /* Code background */
     --code-bg: 220 24% 16%;
@@ -146,6 +157,11 @@ All colors MUST be HSL.
     --method-options: 35 60% 42%;
     --method-head: 190 75% 45%;
     --method-trace: 320 75% 55%;
+    /* HTTP Status Code Colors */
+    --status-2xx: 150 70% 32%; /* Green for success */
+    --status-3xx: 35 90% 50%; /* Yellow/Orange for redirect */
+    --status-4xx: 5 80% 55%; /* Red for client error */
+    --status-5xx: 0 72% 51%; /* Dark red for server error */
   }
 
   [data-theme="light-2"] {
@@ -178,6 +194,11 @@ All colors MUST be HSL.
     --method-options: 320 50% 45%;
     --method-head: 200 85% 46%;
     --method-trace: 330 78% 58%;
+    /* HTTP Status Code Colors */
+    --status-2xx: 145 72% 34%; /* Green for success */
+    --status-3xx: 20 92% 51%; /* Yellow/Orange for redirect */
+    --status-4xx: 350 82% 58%; /* Red for client error */
+    --status-5xx: 0 72% 51%; /* Dark red for server error */
   }
 
   [data-theme="light-3"] {
@@ -210,6 +231,11 @@ All colors MUST be HSL.
     --method-options: 210 40% 48%;
     --method-head: 200 90% 50%;
     --method-trace: 325 82% 62%;
+    /* HTTP Status Code Colors */
+    --status-2xx: 160 75% 38%; /* Green for success */
+    --status-3xx: 30 95% 55%; /* Yellow/Orange for redirect */
+    --status-4xx: 0 85% 62%; /* Red for client error */
+    --status-5xx: 0 72% 51%; /* Dark red for server error */
   }
 
   /* Dark Theme Variants */
@@ -243,6 +269,11 @@ All colors MUST be HSL.
     --method-options: 40 55% 68%;
     --method-head: 190 75% 60%;
     --method-trace: 320 75% 68%;
+    /* HTTP Status Code Colors */
+    --status-2xx: 150 70% 50%; /* Green for success */
+    --status-3xx: 35 90% 65%; /* Yellow/Orange for redirect */
+    --status-4xx: 10 80% 68%; /* Red for client error */
+    --status-5xx: 0 72% 61%; /* Dark red for server error */
   }
 
   [data-theme="dark-2"] {
@@ -275,6 +306,11 @@ All colors MUST be HSL.
     --method-options: 210 40% 68%;
     --method-head: 200 90% 62%;
     --method-trace: 325 82% 72%;
+    /* HTTP Status Code Colors */
+    --status-2xx: 160 75% 50%; /* Green for success */
+    --status-3xx: 30 95% 65%; /* Yellow/Orange for redirect */
+    --status-4xx: 0 85% 72%; /* Red for client error */
+    --status-5xx: 0 72% 61%; /* Dark red for server error */
   }
 
   [data-theme="dark-3"] {
@@ -307,6 +343,11 @@ All colors MUST be HSL.
     --method-options: 320 50% 65%;
     --method-head: 200 85% 58%;
     --method-trace: 330 78% 70%;
+    /* HTTP Status Code Colors */
+    --status-2xx: 145 72% 48%; /* Green for success */
+    --status-3xx: 20 92% 63%; /* Yellow/Orange for redirect */
+    --status-4xx: 350 82% 70%; /* Red for client error */
+    --status-5xx: 0 72% 61%; /* Dark red for server error */
   }
 
   [data-theme="deepdark"] {
@@ -339,6 +380,11 @@ All colors MUST be HSL.
     --method-options: 215 25% 70%;
     --method-head: 199 93% 63%;
     --method-trace: 330 85% 75%;
+    /* HTTP Status Code Colors */
+    --status-2xx: 142 80% 52%; /* Green for success */
+    --status-3xx: 25 98% 68%; /* Yellow/Orange for redirect */
+    --status-4xx: 0 88% 75%; /* Red for client error */
+    --status-5xx: 0 72% 61%; /* Dark red for server error */
   }
 }
 
