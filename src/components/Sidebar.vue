@@ -1,5 +1,8 @@
 <template>
-  <div class="w-80 border-r border-sidebar-border bg-sidebar h-screen flex flex-col">
+  <div 
+    class="border-r border-sidebar-border bg-sidebar h-screen flex flex-col relative flex-shrink-0"
+    :style="{ width: `${sidebarWidth}px` }"
+  >
     <div class="p-4 border-b border-sidebar-border">
       <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-2">
@@ -236,11 +239,17 @@
         Tip: Hover endpoints for details
       </div>
     </div>
+
+    <!-- Drag Handle -->
+    <div
+      class="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-primary/50 transition-colors z-50 select-none"
+      @mousedown="startResize"
+    ></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { ChevronDown, Github } from 'lucide-vue-next'
 import type { TagNode } from '@/types/openapi'
 import ScrollArea from './ui/ScrollArea.vue'
@@ -270,6 +279,43 @@ const emit = defineEmits<{
   (e: 'groupSelect', node: TagNode): void
   (e: 'historySelect', item: RequestHistoryItem): void
 }>()
+
+// Resizing Logic
+const sidebarWidth = ref(320)
+const minWidth = 200
+const maxWidth = 800
+const isResizing = ref(false)
+
+const startResize = () => {
+  isResizing.value = true
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', stopResize)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+const handleResize = (e: MouseEvent) => {
+  if (!isResizing.value) return
+  
+  let newWidth = e.clientX
+  
+  // Apply constraints
+  if (newWidth < minWidth) newWidth = minWidth
+  if (newWidth > maxWidth) newWidth = maxWidth
+  
+  sidebarWidth.value = newWidth
+}
+
+const stopResize = () => {
+  isResizing.value = false
+  document.removeEventListener('mousemove', handleResize)
+  document.removeEventListener('mouseup', stopResize)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  
+  // Persist width
+  localStorage.setItem('sidebarWidth', String(sidebarWidth.value))
+}
 
 const viewMode = ref<'endpoints' | 'history'>('endpoints')
 const expandedNodes = ref<Set<string>>(new Set())
@@ -377,6 +423,22 @@ onMounted(() => {
   const saved = localStorage.getItem('expandedNodes')
   if (saved) {
     expandedNodes.value = new Set(JSON.parse(saved))
+  }
+  
+  // Load saved sidebar width
+  const savedWidth = localStorage.getItem('sidebarWidth')
+  if (savedWidth) {
+    const width = parseInt(savedWidth)
+    if (!isNaN(width) && width >= minWidth && width <= maxWidth) {
+      sidebarWidth.value = width
+    }
+  }
+})
+
+onUnmounted(() => {
+  // Ensure cleanup if component is destroyed while resizing
+  if (isResizing.value) {
+    stopResize()
   }
 })
 
