@@ -21,10 +21,17 @@
           class="fixed z-50 rounded-md border border-code-border bg-code-bg shadow-xl max-w-2xl pointer-events-none"
           :style="tooltipStyle"
         >
+          <div
+            v-if="html"
+            v-html="content"
+            class="tooltip-content w-full px-4 py-3 text-xs text-foreground bg-transparent border-0 overflow-auto"
+            style="max-height: 600px; height: auto;"
+          ></div>
           <textarea
+            v-else
             :value="content"
             readonly
-            class="w-full min-h-[150px] max-h-[600px] px-4 py-3 text-xs font-mono text-foreground bg-transparent border-0 resize-none overflow-auto focus:outline-none"
+            class="tooltip-content w-full min-h-[150px] max-h-[600px] px-4 py-3 text-xs font-mono text-foreground bg-transparent border-0 resize-none overflow-auto focus:outline-none"
             style="scrollbar-width: thin; scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent; height: auto;"
           ></textarea>
         </div>
@@ -40,12 +47,14 @@ interface Props {
   content?: string
   delay?: number
   position?: 'top' | 'bottom' | 'left' | 'right'
+  html?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   content: '',
   delay: 200,
-  position: 'top'
+  position: 'top',
+  html: false
 })
 
 const isVisible = ref(false)
@@ -84,23 +93,24 @@ const updatePosition = () => {
   if (!tooltipRef.value || !containerRef.value) return
 
   const triggerRect = containerRef.value.getBoundingClientRect()
-  const textarea = tooltipRef.value.querySelector('textarea') as HTMLTextAreaElement
+  const contentEl = tooltipRef.value.querySelector('.tooltip-content') as HTMLElement
   
-  if (textarea) {
-    // Reset height to auto to get correct scrollHeight
-    textarea.style.height = 'auto'
-    // Calculate content height with padding
-    const lineHeight = 16 // text-xs line height
-    const padding = 24 // py-3 = 12px top + 12px bottom
-    const minHeight = 150
-    const maxHeight = 600
-    
-    // Get scrollHeight which includes content + padding
-    const scrollHeight = textarea.scrollHeight
-    
-    // Set height based on content, but limit to max-height
-    const contentHeight = Math.max(minHeight, Math.min(scrollHeight, maxHeight))
-    textarea.style.height = `${contentHeight}px`
+  if (contentEl) {
+    if (!props.html && contentEl.tagName === 'TEXTAREA') {
+        // Reset height to auto to get correct scrollHeight
+        contentEl.style.height = 'auto'
+        // Calculate content height with padding
+        const minHeight = 150
+        const maxHeight = 600
+        
+        // Get scrollHeight which includes content + padding
+        const scrollHeight = contentEl.scrollHeight
+        
+        // Set height based on content, but limit to max-height
+        const contentHeight = Math.max(minHeight, Math.min(scrollHeight, maxHeight))
+        contentEl.style.height = `${contentHeight}px`
+    }
+    // For HTML div, height is automatic, just max-height applies via CSS/style
   }
 
   // Wait for height to be applied before calculating position

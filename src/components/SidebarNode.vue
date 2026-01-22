@@ -26,30 +26,46 @@
         v-memo="[op.method, op.path, op.isSelected, op.isPrivate]"
         :key="`${op.method}-${op.path}`"
         :class="[
-          'flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors',
+          'relative flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors group',
           op.itemClass
         ]"
         :style="{ paddingLeft: paddingStyle }"
         @click="handleSelectOperation(op.method, op.path)"
       >
-        <span
-          :class="[
-            'text-xs font-bold px-2 py-0.5 rounded text-white',
-            op.colorClass
-          ]"
+        <Tooltip
+          :content="op.tooltipContent"
+          :delay="500"
+          :html="true"
+          class="flex items-center gap-2 w-full min-w-0"
         >
-          {{ op.method }}
-        </span>
-        <span
-          class="text-sm truncate text-sidebar-foreground flex-1"
-          :title="op.path"
-        >
-          {{ op.path }}
-        </span>
-        <div
-          class="w-2 h-2 rounded-full shrink-0"
-          :class="op.privacyClass"
-        ></div>
+          <span
+            :class="[
+              'text-[9px] uppercase font-bold px-1 py-0.5 rounded text-white shrink-0 w-[38px] text-center tracking-tight',
+              op.colorClass
+            ]"
+          >
+            {{ op.method }}
+          </span>
+          
+          <!-- Endpoint Name/Path with start truncation -->
+          <span
+            class="text-sm text-sidebar-foreground flex-1 min-w-0"
+            :class="{ 'direction-rtl text-left': !op.operation.summary }"
+            style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+          >
+            <span v-if="!op.operation.summary" dir="rtl" class="block truncate text-left w-full">
+               &lrm;{{ op.path }}
+            </span>
+            <span v-else class="truncate block">
+              {{ op.displayName }}
+            </span>
+          </span>
+          
+          <div
+            class="w-1.5 h-1.5 rounded-full shrink-0"
+            :class="op.privacyClass"
+          ></div>
+        </Tooltip>
       </div>
 
       <!-- Render child nodes -->
@@ -78,6 +94,7 @@ import { ChevronRight, ChevronDown } from 'lucide-vue-next'
 import type { TagNode } from '@/types/openapi'
 import { getMethodColorClass, checkOperationPrivacy } from '@/utils/operation-cache'
 import { useSpecStore } from '@/stores/spec'
+import Tooltip from './ui/Tooltip.vue'
 
 interface Props {
   node: TagNode
@@ -131,10 +148,45 @@ const operationsWithPrivacy = computed(() => {
   return props.node.operations.map(op => {
     const isSelected = selectedMethod === op.method && selectedPath === op.path
     const isPrivate = checkOperationPrivacy({ method: op.method, path: op.path }, specsValue)
+    
+    // Determine display name (Summary or Path)
+    const displayName = op.operation.summary || op.path
+    
+    // Tooltip content - Richer Design
+    const methodColorClass = getMethodColorClass(op.method)
+      
+    const tooltipContent = `
+      <div class="flex flex-col gap-3 min-w-[280px]">
+        <div class="flex items-center gap-2.5 pb-2 border-b border-border/10">
+          <span class="text-[10px] font-black uppercase px-1.5 py-0.5 rounded tracking-wider text-white ${methodColorClass}">${op.method}</span>
+          <span class="font-semibold text-sm tracking-tight text-white">${op.operation.summary || 'Endpoint'}</span>
+        </div>
+        
+        <div class="font-mono text-[11px] bg-black/40 px-3 py-2 rounded border border-white/5 break-all text-muted-foreground select-all">
+          ${op.path}
+        </div>
+        
+        ${op.operation.description ? `
+          <div class="text-xs text-muted-foreground/80 leading-relaxed font-normal">
+            ${op.operation.description}
+          </div>
+        ` : ''}
+        
+        ${isPrivate ? `
+          <div class="flex items-center gap-1.5 pt-1 mt-1 border-t border-border/10 text-[10px] items-center text-red-400/90 font-medium">
+             <div class="w-1.5 h-1.5 rounded-full bg-red-500 box-shadow-red"></div>
+             Authenticated Route
+          </div>
+        ` : ''}
+      </div>
+    `
+    
     return {
       ...op,
       isPrivate,
       isSelected,
+      displayName,
+      tooltipContent,
       colorClass: getMethodColorClass(op.method),
       // Pre-compute class strings to avoid template calculations
       itemClass: isSelected

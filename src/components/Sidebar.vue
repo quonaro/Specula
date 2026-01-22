@@ -205,6 +205,37 @@
         </div>
       </div>
     </div>
+    
+    <!-- Endpoints Footer Actions -->
+    <div v-if="viewMode === 'endpoints'" class="border-t border-sidebar-border p-3 gap-2 flex flex-col mt-auto bg-sidebar z-10">
+      <div class="flex gap-2">
+        <button
+          @click="expandAll"
+          :class="[
+            'flex-1 px-3 py-1.5 text-xs rounded-md border transition-colors',
+            isAllExpanded
+              ? 'bg-sidebar-accent text-sidebar-foreground shadow-inner border-sidebar-accent font-medium'
+              : 'border-sidebar-border bg-sidebar hover:bg-sidebar-accent text-sidebar-foreground'
+          ]"
+        >
+          Expand All
+        </button>
+        <button
+          @click="collapseAll"
+          :class="[
+            'flex-1 px-3 py-1.5 text-xs rounded-md border transition-colors',
+            isCollapsed
+              ? 'bg-sidebar-accent text-sidebar-foreground shadow-inner border-sidebar-accent font-medium'
+              : 'border-sidebar-border bg-sidebar hover:bg-sidebar-accent text-sidebar-foreground'
+          ]"
+        >
+          Collapse
+        </button>
+      </div>
+      <div class="text-[10px] text-sidebar-foreground/50 text-center italic">
+        Tip: Hover endpoints for details
+      </div>
+    </div>
   </div>
 </template>
 
@@ -268,7 +299,46 @@ const toggleMethod = (method: string) => {
 const clearFilters = () => {
   selectedMethods.value = new Set(['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
   securityFilter.value = 'all'
+  securityFilter.value = 'all'
 }
+
+const collapseAll = () => {
+  expandedNodes.value = new Set()
+}
+
+const expandAll = () => {
+  const allPaths = new Set<string>()
+  
+  const collectPaths = (node: TagNode) => {
+    if (node.name !== 'root') {
+      allPaths.add(node.fullPath)
+    }
+    node.children.forEach(child => collectPaths(child))
+  }
+  
+  // Traverse all children of root
+  props.root.children.forEach(child => collectPaths(child))
+  
+  expandedNodes.value = allPaths
+}
+
+const totalExpandableCount = computed(() => {
+  let count = 0
+  const countNodes = (node: TagNode) => {
+    if (node.name !== 'root') count++
+    node.children.forEach(countNodes)
+  }
+  props.root.children.forEach(countNodes)
+  return count
+})
+
+const isAllExpanded = computed(() => {
+  return totalExpandableCount.value > 0 && expandedNodes.value.size >= totalExpandableCount.value
+})
+
+const isCollapsed = computed(() => {
+  return expandedNodes.value.size === 0
+})
 
 // Memoize rootChildren - only recalculate when root.children changes
 const rootChildren = computed(() => {
