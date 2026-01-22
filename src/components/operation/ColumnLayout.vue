@@ -16,6 +16,8 @@
               v-model="column.cards"
               :group="{ name: 'cards', pull: true, put: true }"
               :animation="200"
+              filter="input, textarea, button, select, [contenteditable='true']"
+              :prevent-on-filter="false"
               ghost-class="opacity-50"
               drag-class="cursor-grabbing"
               handle=".drag-handle"
