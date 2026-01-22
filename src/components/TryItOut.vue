@@ -100,10 +100,9 @@
           ref="requestBodyTextarea"
           :model-value="requestBody" 
           @update:model-value="requestBody = $event"
-          @input="adjustTextareaHeight"
+          auto-resize
           placeholder="Enter JSON request body" 
-          class="font-mono text-xs resize-none overflow-hidden" 
-          style="min-height: 80px;"
+          class="font-mono text-xs max-h-[600px]" 
         />
       </div>
     </template>
@@ -183,7 +182,7 @@ const paramValues = ref<Record<string, string>>({})
 const paramFileValues = ref<Record<string, File>>({})
 const requestBody = ref('{}')
 const requestBodyFile = ref<File | null>(null)
-const requestBodyTextarea = ref<HTMLTextAreaElement | null>(null)
+const requestBodyTextarea = ref<any>(null)
 const commandFormat = ref<'edit' | 'curl' | 'wget'>('edit')
 const commandCopied = ref(false)
 
@@ -389,9 +388,6 @@ const loadSavedRequestBody = async () => {
     if (saved && rememberSaved === 'true') {
       requestBody.value = saved
       rememberBody.value = true
-      // Adjust height after loading saved body
-      await nextTick()
-      adjustTextareaHeight()
     }
   } catch (error) {
     console.error('Failed to load saved request body:', error)
@@ -591,43 +587,20 @@ const handleRequestBodyFileChange = (event: Event) => {
   }
 }
 
-// Adjust textarea height to fit content
-const adjustTextareaHeight = () => {
-  if (requestBodyTextarea.value) {
-    // Get the textarea element from the exposed ref
-    const textarea = (requestBodyTextarea.value as any)?.textarea?.value || 
-                     (requestBodyTextarea.value as any)?.textarea ||
-                     requestBodyTextarea.value
-    
-    if (textarea && textarea instanceof HTMLTextAreaElement) {
-      // Reset height to auto to get correct scrollHeight
-      textarea.style.height = 'auto'
-      // Set height to scrollHeight to fit content (min 80px from component default)
-      const minHeight = 80
-      const newHeight = Math.max(textarea.scrollHeight, minHeight)
-      textarea.style.height = `${newHeight}px`
-    }
-  }
-}
+// Logic moved to Textarea component
 
 // Watch requestBody changes and save if remember is checked
-watch(requestBody, async () => {
+watch(requestBody, () => {
   if (!isRequestBodyFile.value) {
     saveRequestBody()
-    // Adjust height after content changes
-    await nextTick()
-    adjustTextareaHeight()
   }
 })
 
 // Initialize requestBody with example when component mounts or operation changes
-const initializeRequestBody = async () => {
+const initializeRequestBody = () => {
   if (hasRequestBody.value) {
     const example = getRequestBodyExample()
     requestBody.value = example
-    // Adjust height after initialization
-    await nextTick()
-    adjustTextareaHeight()
   }
 }
 
@@ -652,17 +625,10 @@ onMounted(async () => {
   await initializeRequestBody()
   loadSavedParamValues()
   await loadSavedRequestBody()
-  // Adjust height after everything is loaded
-  await nextTick()
-  adjustTextareaHeight()
-  
-  // Listen for window resize to adjust textarea height
-  window.addEventListener('resize', adjustTextareaHeight)
 })
 
 // Cleanup on unmount
 onUnmounted(() => {
-  window.removeEventListener('resize', adjustTextareaHeight)
 })
 
 // Build request URL with path and query parameters (with variable resolution)

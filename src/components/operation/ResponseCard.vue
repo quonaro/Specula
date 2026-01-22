@@ -14,8 +14,12 @@
       </Button>
     </div>
 
-    <Textarea :model-value="getResponseText" readonly
-      class="h-[400px] w-full bg-code-bg border border-code-border text-xs font-mono resize-none" />
+    <Textarea 
+      :model-value="getResponseText" 
+      readonly
+      auto-resize
+      class="max-h-[800px] w-full bg-code-bg border border-code-border text-xs font-mono" 
+    />
   </Card>
 </template>
 
