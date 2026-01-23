@@ -1219,18 +1219,21 @@ const handleExecute = async () => {
       specTitle: props.spec.info?.title,
     })
     
-    // Show validation warnings/errors
-    if (validation.errors.length > 0) {
-      toast({
-        title: 'Validation Errors',
-        description: `Response validation failed: ${validation.errors.length} error(s)`,
-        variant: 'destructive',
-      })
-    } else if (validation.warnings.length > 0) {
-      toast({
-        title: 'Validation Warnings',
-        description: `Response validation: ${validation.warnings.length} warning(s)`,
-      })
+    // Show validation warnings/errors (only for non-success status codes)
+    const isSuccess = res.status === 200 || res.status === 201
+    if (!isSuccess) {
+      if (validation.errors.length > 0) {
+        toast({
+          title: 'Validation Errors',
+          description: `Response validation failed: ${validation.errors.length} error(s)`,
+          variant: 'destructive',
+        })
+      } else if (validation.warnings.length > 0) {
+        toast({
+          title: 'Validation Warnings',
+          description: `Response validation: ${validation.warnings.length} warning(s)`,
+        })
+      }
     }
     
     // Emit response to parent component
