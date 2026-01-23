@@ -14,6 +14,32 @@
       </Button>
     </div>
 
+    <!-- Validation Errors -->
+    <div v-if="response?.validation?.errors?.length" class="bg-destructive/10 border border-destructive/20 rounded-md p-3 space-y-2">
+      <div class="flex items-center gap-2 text-destructive font-semibold text-sm">
+        <AlertCircle class="w-4 h-4" />
+        <span>Validation Errors ({{ response.validation.errors.length }})</span>
+      </div>
+      <ul class="list-disc list-inside text-xs text-destructive space-y-1">
+        <li v-for="(error, idx) in response.validation.errors" :key="idx">
+          <span class="font-mono bg-destructive/10 px-1 rounded">{{ error.path }}</span>: {{ error.message }}
+        </li>
+      </ul>
+    </div>
+
+    <!-- Validation Warnings -->
+    <div v-if="response?.validation?.warnings?.length" class="bg-yellow-500/10 border border-yellow-500/20 rounded-md p-3 space-y-2">
+      <div class="flex items-center gap-2 text-yellow-600 font-semibold text-sm">
+        <AlertTriangle class="w-4 h-4" />
+        <span>Validation Warnings ({{ response.validation.warnings.length }})</span>
+      </div>
+      <ul class="list-disc list-inside text-xs text-yellow-600 space-y-1">
+        <li v-for="(warning, idx) in response.validation.warnings" :key="idx">
+          <span class="font-mono bg-yellow-500/10 px-1 rounded">{{ warning.path }}</span>: {{ warning.message }}
+        </li>
+      </ul>
+    </div>
+
     <Textarea 
       :model-value="getResponseText" 
       readonly
@@ -25,7 +51,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { Copy, Check, FileText } from 'lucide-vue-next'
+import { Copy, Check, FileText, AlertCircle, AlertTriangle } from 'lucide-vue-next'
 import { getStatusColorClass } from '@/utils/operation-cache'
 import { useToast } from '@/composables/useToast'
 import Badge from '../ui/Badge.vue'
