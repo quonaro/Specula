@@ -111,8 +111,8 @@
     <template v-else>
       <div class="space-y-2">
         <div class="relative">
-          <Textarea :model-value="generatedCommand" readonly
-            class="bg-code-bg border border-code-border text-xs font-mono min-h-[200px] max-h-[600px] resize-none" />
+          <Textarea :model-value="generatedCommand" readonly auto-resize
+            class="bg-code-bg border border-code-border text-xs font-mono resize-none overflow-hidden" />
           <Button variant="ghost" size="sm" @click="handleCopyCommand(generatedCommand)" class="absolute top-2 right-2">
             <Check v-if="commandCopied" class="w-4 h-4" />
             <Copy v-else class="w-4 h-4" />
@@ -132,6 +132,8 @@
 </template>
 
 <script setup lang="ts">
+import { useClipboard } from '@vueuse/core'
+
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Play, Copy, Check, Settings, X } from 'lucide-vue-next'
 import Card from './ui/Card.vue'
@@ -175,6 +177,7 @@ const responseValidator = new ResponseValidator(props.spec)
 const operationSecurity = computed(() => {
   return getOperationSecurity(props.operation, props.pathItem, props.spec)
 })
+
 const isExecuting = ref(false)
 const abortController = ref<AbortController | null>(null)
 const response = ref<any>(null)
@@ -184,7 +187,7 @@ const requestBody = ref('{}')
 const requestBodyFile = ref<File | null>(null)
 const requestBodyTextarea = ref<any>(null)
 const commandFormat = ref<'edit' | 'curl' | 'wget'>('edit')
-const commandCopied = ref(false)
+// commandCopied is now provided by useClipboard destructuring aliased as commandCopied
 
 // Remember checkboxes for parameters and body
 const rememberParam = ref<Record<string, boolean>>({})
@@ -944,20 +947,18 @@ const generatedCommand = computed(() => {
   }
 })
 
+const { copy, copied: commandCopied, isSupported } = useClipboard({ legacy: true })
+
 // Handle copy command
 const handleCopyCommand = async (command: string) => {
-  try {
-    await navigator.clipboard.writeText(command)
-  commandCopied.value = true
-  setTimeout(() => {
-    commandCopied.value = false
-  }, 2000)
-  toast({
-    title: 'Copied!',
-    description: 'Command copied to clipboard',
-  })
-  } catch (error) {
-    console.error('Failed to copy command:', error)
+  await copy(command)
+
+  if (commandCopied.value) {
+    toast({
+      title: 'Copied!',
+      description: 'Command copied to clipboard',
+    })
+  } else {
     toast({
       title: 'Copy Failed',
       description: 'Failed to copy command to clipboard',

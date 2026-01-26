@@ -1,6 +1,6 @@
 <template>
   <textarea
-    ref="textareaRef"
+    ref="textarea"
     :value="modelValue"
     :class="cn(
       'flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
@@ -13,7 +13,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { watch } from 'vue'
+import { useTextareaAutosize } from '@vueuse/core'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -32,46 +33,24 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
-const textareaRef = ref<HTMLTextAreaElement | null>(null)
+const { textarea, input } = useTextareaAutosize({
+  input: props.modelValue,
+  styleProp: 'minHeight' 
+})
 
-const adjustHeight = () => {
-  if (!props.autoResize || !textareaRef.value) return
-  
-  const textarea = textareaRef.value
-  textarea.style.height = 'auto'
-  textarea.style.height = `${textarea.scrollHeight}px`
-}
+// Sync modelValue changes to input ref from useTextareaAutosize
+watch(() => props.modelValue, (newVal) => {
+  input.value = newVal
+})
 
 const handleInput = (event: Event) => {
   const target = event.target as HTMLTextAreaElement
   emit('update:modelValue', target.value)
-  if (props.autoResize) {
-    adjustHeight()
-  }
 }
-
-watch(() => props.modelValue, async () => {
-  if (props.autoResize) {
-    await nextTick()
-    adjustHeight()
-  }
-})
-
-onMounted(() => {
-  if (props.autoResize) {
-    adjustHeight()
-    window.addEventListener('resize', adjustHeight)
-  }
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', adjustHeight)
-})
 
 // Expose the textarea element for parent components
 defineExpose({
-  textarea: textareaRef,
-  adjustHeight
+  textarea
 })
 </script>
 
