@@ -41,13 +41,16 @@
     </div>
 
     <ScrollArea class="max-h-[600px] w-full rounded-md bg-code-bg border border-code-border no-drag cursor-text">
-      <pre class="p-4 text-xs font-mono whitespace-pre-wrap break-all text-foreground">{{ getResponseText }}</pre>
-    </ScrollArea>
+       <div v-if="isImageResponse" class="p-4 flex justify-center bg-[url('/transparent-bg.png')] bg-repeat">
+         <img :src="imageUrl" alt="Response Image" class="max-w-full h-auto rounded border border-border shadow-sm" />
+       </div>
+       <pre v-else class="p-4 text-xs font-mono whitespace-pre-wrap break-all text-foreground">{{ getResponseText }}</pre>
+     </ScrollArea>
   </Card>
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, watch, onUnmounted, ref } from 'vue'
 import { Copy, Check, FileText, AlertCircle, AlertTriangle } from 'lucide-vue-next'
 import { useClipboard } from '@vueuse/core'
 import { getStatusColorClass } from '@/utils/operation-cache'
@@ -105,6 +108,12 @@ const getResponseText = computed((): string => {
 
     // If response has data, format it as JSON
     if (props.response.data !== undefined && props.response.data !== null) {
+      
+      // Handle Blob data (images, etc)
+      if (props.response.data instanceof Blob) {
+        return `[Binary Data] ${props.response.data.type} (${props.response.data.size} bytes)`
+      }
+
       // If data is already a string, try to parse it as JSON, otherwise return as is
       if (typeof props.response.data === 'string') {
         try {
@@ -126,6 +135,40 @@ const getResponseText = computed((): string => {
   } catch (error) {
     // Fallback: return stringified response object
     return JSON.stringify(props.response, null, 2)
+  }
+})
+
+// Check if response is an image
+const isImageResponse = computed(() => {
+  if (!props.response?.data) return false
+  
+  // Check if it's a Blob and type is image
+  if (props.response.data instanceof Blob) {
+    return props.response.data.type.startsWith('image/')
+  }
+  
+  return false
+})
+
+// Create URL for image response
+const imageUrl = ref('')
+
+watch(() => props.response?.data, (newData) => {
+  // Revoke previous URL to avoid memory leaks
+  if (imageUrl.value) {
+    URL.revokeObjectURL(imageUrl.value)
+    imageUrl.value = ''
+  }
+
+  if (newData instanceof Blob && newData.type.startsWith('image/')) {
+    imageUrl.value = URL.createObjectURL(newData)
+  }
+}, { immediate: true })
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (imageUrl.value) {
+    URL.revokeObjectURL(imageUrl.value)
   }
 })
 

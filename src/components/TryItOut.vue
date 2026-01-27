@@ -1175,6 +1175,8 @@ const handleExecute = async () => {
 
     if (contentType?.includes('application/json')) {
       responseData = await res.json()
+    } else if (contentType?.includes('image/') || contentType?.includes('application/pdf')) {
+      responseData = await res.blob()
     } else {
       responseData = await res.text()
     }
