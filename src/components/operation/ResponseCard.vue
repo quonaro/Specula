@@ -40,12 +40,12 @@
       </ul>
     </div>
 
-    <ScrollArea class="max-h-[600px] w-full rounded-md bg-code-bg border border-code-border no-drag cursor-text">
+    <div class="max-h-[600px] w-full rounded-md bg-code-bg border border-code-border no-drag cursor-text overflow-auto">
        <div v-if="isImageResponse" class="p-4 flex justify-center bg-[url('/transparent-bg.png')] bg-repeat">
          <img :src="imageUrl" alt="Response Image" class="max-w-full h-auto rounded border border-border shadow-sm" />
        </div>
        <pre v-else class="p-4 text-xs font-mono whitespace-pre-wrap break-all text-foreground">{{ getResponseText }}</pre>
-     </ScrollArea>
+     </div>
   </Card>
 </template>
 
@@ -58,7 +58,7 @@ import { useToast } from '@/composables/useToast'
 import Badge from '../ui/Badge.vue'
 import Card from '../ui/Card.vue'
 import Button from '../ui/Button.vue'
-import ScrollArea from '../ui/ScrollArea.vue'
+
 
 interface ValidationError {
   path: string
