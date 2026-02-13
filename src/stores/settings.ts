@@ -1,16 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 
-export type AccentColor = 
-  | 'purple' 
-  | 'blue' 
-  | 'green' 
-  | 'orange' 
-  | 'red' 
-  | 'pink' 
-  | 'cyan' 
-  | 'yellow' 
-  | 'indigo' 
+export type AccentColor =
+  | 'purple'
+  | 'blue'
+  | 'green'
+  | 'orange'
+  | 'red'
+  | 'pink'
+  | 'cyan'
+  | 'yellow'
+  | 'indigo'
   | 'teal'
 
 interface AccentColorConfig {
@@ -55,17 +55,17 @@ export const useSettingsStore = defineStore('settings', () => {
   // Apply accent color to CSS variables
   const applyAccentColor = (color: AccentColor) => {
     if (typeof document === 'undefined') return
-    
+
     const config = accentColorMap[color]
     const root = document.documentElement
-    
+
     // Apply light theme colors
     root.style.setProperty('--primary', config.light)
     root.style.setProperty('--accent', config.light)
     root.style.setProperty('--ring', config.light)
     root.style.setProperty('--sidebar-primary', config.light)
     root.style.setProperty('--sidebar-ring', config.light)
-    
+
     // Apply dark theme colors via style element
     const styleEl = getAccentStyleElement()
     styleEl.textContent = `
@@ -77,11 +77,11 @@ export const useSettingsStore = defineStore('settings', () => {
         --sidebar-ring: ${config.dark};
       }
     `
-    
+
     // Store color config
     root.setAttribute('data-accent-color', color)
   }
-  
+
   // Re-apply accent color when theme changes
   const reapplyAccentColor = () => {
     applyAccentColor(accentColor.value)
@@ -104,10 +104,52 @@ export const useSettingsStore = defineStore('settings', () => {
     applyAccentColor(newColor)
   })
 
+  // Server URL preferences
+  const customServerUrl = ref('')
+  const preferredServerType = ref<'custom' | 'current-host' | 'spec' | null>(null)
+
+  // Initialize server preferences from localStorage
+  if (typeof window !== 'undefined') {
+    const savedCustomUrl = localStorage.getItem('customServerUrl')
+    if (savedCustomUrl) customServerUrl.value = savedCustomUrl
+
+    const savedPreferredType = localStorage.getItem('preferredServerType') as any
+    if (['custom', 'current-host', 'spec'].includes(savedPreferredType)) {
+      preferredServerType.value = savedPreferredType
+    }
+  }
+
+  // Save server preferences
+  watch(customServerUrl, (newValue) => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('customServerUrl', newValue)
+    }
+  })
+
+  watch(preferredServerType, (newValue) => {
+    if (typeof localStorage !== 'undefined') {
+      if (newValue) {
+        localStorage.setItem('preferredServerType', newValue)
+      } else {
+        localStorage.removeItem('preferredServerType')
+      }
+    }
+  })
+
+  const setServerPreference = (type: 'custom' | 'current-host' | 'spec', url?: string) => {
+    preferredServerType.value = type
+    if (url !== undefined && type === 'custom') {
+      customServerUrl.value = url
+    }
+  }
+
   return {
     accentColor,
     setAccentColor,
     reapplyAccentColor,
+    customServerUrl,
+    preferredServerType,
+    setServerPreference
   }
 })
 

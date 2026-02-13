@@ -53,6 +53,7 @@ import type { Operation, OpenAPISpec, PathItem } from '@/types/openapi'
 import { RefResolver } from '@/utils/ref-resolver'
 import { getOperationSecurity } from '@/utils/openapi-parser'
 import { useAuthorizationStore } from '@/stores/authorization'
+import { useSettingsStore } from '@/stores/settings'
 import Button from './ui/Button.vue'
 import Separator from './ui/Separator.vue'
 import OperationHeader from './operation/OperationHeader.vue'
@@ -83,6 +84,7 @@ const operationSecurity = computed(() => {
 
 // Authorization management
 const authorizationStore = useAuthorizationStore()
+const settingsStore = useSettingsStore()
 const localAuthorizationCredentials = ref<Record<string, string>>({})
 
 // Initialize local credentials from global store
@@ -107,6 +109,19 @@ const selectedServer = ref('')
 
 // Initialize selected server
 const initializeServer = () => {
+  // Check persisted preference first
+  if (settingsStore.preferredServerType === 'custom' && settingsStore.customServerUrl) {
+    selectedServer.value = 'custom'
+    customServerUrl.value = settingsStore.customServerUrl
+    return
+  }
+  
+  if (settingsStore.preferredServerType === 'current-host') {
+    selectedServer.value = 'current-host'
+    return
+  }
+  
+  // If preference is 'spec' or not set, fall back to default priority:
   // Priority: operation servers > spec servers > sourceUrl > current-host
   if (props.operation.servers && props.operation.servers.length > 0) {
     selectedServer.value = props.operation.servers[0].url
@@ -125,7 +140,9 @@ const initializeServer = () => {
       // Invalid URL
     }
   }
-      selectedServer.value = 'current-host'
+  
+  // If no other option, and we are not forcing a preference, default to current-host
+  selectedServer.value = 'current-host'
 }
 
 // Get current host URL
@@ -150,14 +167,32 @@ const currentServerUrl = computed(() => {
 // Provide server URL update function
 const updateServerUrl = (url: string) => {
   selectedServer.value = url
+  
   if (url === 'custom') {
-    customServerUrl.value = ''
+    customServerUrl.value = settingsStore.customServerUrl || ''
+    settingsStore.setServerPreference('custom', customServerUrl.value)
+  } else if (url === 'current-host') {
+    settingsStore.setServerPreference('current-host')
+  } else {
+    // It's a spec defined server
+    settingsStore.setServerPreference('spec')
+  }
+
+  if (url === 'custom') {
+    // Ensure we don't overwrite if it was already set from store
+    if (!customServerUrl.value && settingsStore.customServerUrl) {
+       customServerUrl.value = settingsStore.customServerUrl
+    }
+  } else {
+     // If switching away from custom, we might want to keep the custom URL in the store?
+     // Yes, setServerPreference('spec') doesn't clear customServerUrl in the store.
   }
 }
 
 const updateCustomServerUrl = (url: string) => {
   customServerUrl.value = url
   selectedServer.value = 'custom'
+  settingsStore.setServerPreference('custom', url)
 }
 
 // Provide authorization update function
